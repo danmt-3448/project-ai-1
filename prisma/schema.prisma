@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  price       Float
+  inventory   Int      @default(0)
+  published   Boolean  @default(false)
+  images      String   @default("[]")
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([published])
+  @@index([slug])
+  @@map("products")
+}
+
+model Order {
+  id         String      @id @default(cuid())
+  buyerName  String
+  buyerEmail String
+  address    String
+  total      Float
+  status     String      @default("CONFIRMED") // CONFIRMED, FAILED, CANCELLED
+  items      OrderItem[]
+  createdAt  DateTime    @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  productId String
+  name      String
+  price     Float
+  quantity  Int
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model AdminUser {
+  id       String @id @default(cuid())
+  username String @unique
+  password String // bcrypt hashed
+
+  @@map("admin_users")
+}

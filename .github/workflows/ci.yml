@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: |
+          cd apps/frontend || exit 0
+          if [ -f package.json ]; then npm run lint --if-present; fi
+
+      - name: Lint backend
+        run: |
+          cd apps/backend || exit 0
+          if [ -f package.json ]; then npm run lint --if-present; fi
+
+      - name: Typecheck
+        run: |
+          cd apps/frontend || exit 0
+          if [ -f tsconfig.json ]; then npm run type-check --if-present; fi
+          cd -
+          cd apps/backend || exit 0
+          if [ -f tsconfig.json ]; then npm run type-check --if-present; fi
+
+      - name: Run tests
+        run: |
+          cd apps/frontend || exit 0
+          if [ -f package.json ]; then npm test --if-present; fi
+          cd -
+          cd apps/backend || exit 0
+          if [ -f package.json ]; then npm test --if-present; fi
+
+      - name: Build apps
+        run: |
+          cd apps/frontend || exit 0
+          if [ -f package.json ]; then npm run build --if-present; fi
+          cd -
+          cd apps/backend || exit 0
+          if [ -f package.json ]; then npm run build --if-present; fi
