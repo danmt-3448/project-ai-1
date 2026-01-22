@@ -131,18 +131,22 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 
 ---
 
-## Step 5: Run Database Migrations
+## Step 5: Run Database Migrations (Postgres)
 
 ```bash
-# Generate Prisma Client
-yarn prisma:generate
+# From repo root, go to backend app
+cd apps/backend
 
-# Run migrations (tạo tables)
-yarn prisma:migrate
+# Generate Prisma Client (uses apps/backend/prisma/schema.postgres.prisma)
+npx prisma generate --schema=prisma/schema.postgres.prisma
 
-# Check migration success
-yarn prisma:studio
-# Mở http://localhost:5555 để xem database schema
+# Push schema to Postgres (creates tables). For development use `db push`;
+# for production migrations use `prisma migrate deploy` after creating migrations.
+npx prisma db push --schema=prisma/schema.postgres.prisma
+
+# Check migration/schema success with Prisma Studio
+npx prisma studio --schema=prisma/schema.postgres.prisma
+# Open http://localhost:5555 to inspect the DB
 ```
 
 ---
@@ -150,8 +154,11 @@ yarn prisma:studio
 ## Step 6: Seed Database with Sample Data
 
 ```bash
-# Run seed script
-yarn seed
+# From repo root (or after cd apps/backend):
+cd apps/backend
+
+# Run seed script (uses apps/backend/prisma/seed.ts)
+npx tsx prisma/seed.ts
 ```
 
 Seed script sẽ tạo:
@@ -161,7 +168,7 @@ Seed script sẽ tạo:
 
 **Verify seed data**:
 ```bash
-npx prisma studio
+npx prisma studio --schema=prisma/schema.postgres.prisma
 # Check Products, Categories, AdminUser tables
 ```
 
@@ -262,8 +269,8 @@ project-ai-1/
 │       ├── store/            # Zustand stores
 │       └── lib/              # API client
 │
-├── prisma/
-│   ├── schema.prisma         # Database schema
+├── apps/backend/prisma/
+│   ├── schema.postgres.prisma # Database schema (Postgres)
 │   └── seed.ts               # Seed data
 │
 └── context/
