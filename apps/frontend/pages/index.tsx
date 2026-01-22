@@ -30,12 +30,11 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
 
   // Fetch categories
-  const { data: categories, error: categoriesError } = useSWR<Category[]>(
-    '/api/categories',
-    () => api.getCategories()
+  const { data: categories, error: categoriesError } = useSWR<Category[]>('/api/categories', () =>
+    api.getCategories()
   );
 
-  // Fetch products  
+  // Fetch products
   const { data: productsData, error: productsError } = useSWR(
     ['/api/products', selectedCategory],
     ([_, cat]) => api.getProducts({ category: cat, limit: 8 })

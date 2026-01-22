@@ -72,7 +72,7 @@ describe('Category CRUD API', () => {
 
       expect(categories).toBeDefined();
       expect(categories.length).toBeGreaterThanOrEqual(2);
-      
+
       categories.forEach((cat) => {
         expect(cat).toHaveProperty('id');
         expect(cat).toHaveProperty('name');

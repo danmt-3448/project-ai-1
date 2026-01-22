@@ -37,7 +37,7 @@ describe('Admin Categories API - GET /api/admin/categories', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     req = {
       method: 'GET',
       headers: {

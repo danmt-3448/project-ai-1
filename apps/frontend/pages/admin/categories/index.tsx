@@ -14,20 +14,20 @@ interface Category {
 export default function AdminCategories() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
-  
+
   // Form states
   const [createName, setCreateName] = useState('');
   const [createSlug, setCreateSlug] = useState('');
   const [createError, setCreateError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  
+
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editSlug, setEditSlug] = useState('');
   const [editError, setEditError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Delete state
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState('');
@@ -44,10 +44,10 @@ export default function AdminCategories() {
 
   const fetcher = async (url: string) => {
     if (!token) return null;
-    
+
     const response = await fetch(url, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -64,7 +64,11 @@ export default function AdminCategories() {
     return response.json();
   };
 
-  const { data: categories, error, mutate } = useSWR<Category[]>(
+  const {
+    data: categories,
+    error,
+    mutate,
+  } = useSWR<Category[]>(
     token ? `${process.env.NEXT_PUBLIC_API_URL}/admin/categories` : null,
     fetcher
   );
@@ -104,7 +108,7 @@ export default function AdminCategories() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           name: createName,
@@ -174,7 +178,7 @@ export default function AdminCategories() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           name: editName,
@@ -218,17 +222,23 @@ export default function AdminCategories() {
     setDeleteError('');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/categories/${deleteId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/categories/${deleteId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (response.status === 409) {
         const data = await response.json();
-        const category = categories?.find(c => c.id === deleteId);
-        setDeleteError(data.message || `Cannot delete category with ${category?.productCount || 0} associated products`);
+        const category = categories?.find((c) => c.id === deleteId);
+        setDeleteError(
+          data.message ||
+            `Cannot delete category with ${category?.productCount || 0} associated products`
+        );
         return;
       }
 
@@ -257,7 +267,7 @@ export default function AdminCategories() {
     return null;
   }
 
-  const categoryToDelete = categories?.find(c => c.id === deleteId);
+  const categoryToDelete = categories?.find((c) => c.id === deleteId);
 
   return (
     <>
@@ -270,16 +280,28 @@ export default function AdminCategories() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between">
               <div className="flex">
-                <Link href="/admin/dashboard" className="flex items-center px-2 py-2 text-gray-700 hover:text-gray-900">
+                <Link
+                  href="/admin/dashboard"
+                  className="flex items-center px-2 py-2 text-gray-700 hover:text-gray-900"
+                >
                   Admin Dashboard
                 </Link>
-                <Link href="/admin/products" className="flex items-center px-2 py-2 text-gray-700 hover:text-gray-900">
+                <Link
+                  href="/admin/products"
+                  className="flex items-center px-2 py-2 text-gray-700 hover:text-gray-900"
+                >
                   Products
                 </Link>
-                <Link href="/admin/categories" className="flex items-center border-b-2 border-blue-500 px-2 py-2 text-gray-900">
+                <Link
+                  href="/admin/categories"
+                  className="flex items-center border-b-2 border-blue-500 px-2 py-2 text-gray-900"
+                >
                   Categories
                 </Link>
-                <Link href="/admin/orders" className="flex items-center px-2 py-2 text-gray-700 hover:text-gray-900">
+                <Link
+                  href="/admin/orders"
+                  className="flex items-center px-2 py-2 text-gray-700 hover:text-gray-900"
+                >
                   Orders
                 </Link>
               </div>
@@ -332,9 +354,7 @@ export default function AdminCategories() {
               </div>
 
               {createError && (
-                <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">
-                  {createError}
-                </div>
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{createError}</div>
               )}
 
               <button
@@ -349,7 +369,7 @@ export default function AdminCategories() {
 
           {/* Categories List */}
           <div className="rounded-lg bg-white shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
+            <div className="border-b border-gray-200 px-6 py-4">
               <h2 className="text-xl font-semibold text-gray-900">All Categories</h2>
             </div>
 
@@ -441,19 +461,19 @@ export default function AdminCategories() {
                         ) : (
                           <>
                             {/* View Mode */}
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
                               {category.name}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                               {category.slug}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                               {category.productCount}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                               <button
                                 onClick={() => startEdit(category)}
-                                className="text-blue-600 hover:text-blue-900 mr-4"
+                                className="mr-4 text-blue-600 hover:text-blue-900"
                               >
                                 Edit
                               </button>
@@ -479,31 +499,43 @@ export default function AdminCategories() {
       {/* Delete Confirmation Modal */}
       {deleteId && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+          <div className="flex min-h-screen items-center justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
             {/* Backdrop */}
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={cancelDelete}></div>
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={cancelDelete}
+            ></div>
 
             {/* Modal */}
             <div className="inline-block transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    <svg
+                      className="h-6 w-6 text-red-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                      />
                     </svg>
                   </div>
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg font-medium leading-6 text-gray-900">
-                      Delete Category
-                    </h3>
+                  <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                    <h3 className="text-lg font-medium leading-6 text-gray-900">Delete Category</h3>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
                         Are you sure you want to delete "<strong>{categoryToDelete?.name}</strong>"?
                       </p>
                       {categoryToDelete && categoryToDelete.productCount > 0 && (
                         <p className="mt-2 text-sm font-medium text-red-600">
-                          ⚠️ This category has {categoryToDelete.productCount} associated product(s). 
-                          You cannot delete it until those products are reassigned or deleted.
+                          ⚠️ This category has {categoryToDelete.productCount} associated
+                          product(s). You cannot delete it until those products are reassigned or
+                          deleted.
                         </p>
                       )}
                     </div>
@@ -520,7 +552,7 @@ export default function AdminCategories() {
                   type="button"
                   onClick={handleDelete}
                   disabled={isDeleting || (categoryToDelete && categoryToDelete.productCount > 0)}
-                  className="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3 sm:w-auto sm:text-sm"
+                  className="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   {isDeleting ? 'Deleting...' : 'Delete'}
                 </button>

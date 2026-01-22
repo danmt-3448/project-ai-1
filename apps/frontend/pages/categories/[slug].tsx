@@ -56,10 +56,7 @@ export default function CategoryProducts() {
     <>
       <Head>
         <title>{data?.category?.name || slug} - Mini Store</title>
-        <meta
-          name="description"
-          content={`Browse ${data?.category?.name || slug} products`}
-        />
+        <meta name="description" content={`Browse ${data?.category?.name || slug} products`} />
       </Head>
 
       <div>
