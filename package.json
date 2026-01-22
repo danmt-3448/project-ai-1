@@ -24,7 +24,8 @@
     "prisma:generate": "cd apps/backend && yarn prisma:generate",
     "prisma:migrate": "cd apps/backend && yarn prisma:migrate",
     "prisma:studio": "cd apps/backend && yarn prisma:studio",
-    "seed": "cd apps/backend && npx tsx prisma/seed.ts"
+    "seed": "cd apps/backend && npx tsx prisma/seed.ts",
+    "clear:db": "cd apps/backend && npx prisma migrate reset --force --skip-generate --schema prisma/schema.postgres.prisma"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

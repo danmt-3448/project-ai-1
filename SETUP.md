@@ -50,7 +50,31 @@ cd ../..
 
 ## Step 3: Setup PostgreSQL Database
 
-### Option A: Local PostgreSQL
+### Option A: Using Docker (Colima on macOS)
+
+```bash
+# Start Colima (Docker runtime for macOS)
+colima start
+
+# Run PostgreSQL container
+docker run --name postgres-dev \
+  -e POSTGRES_PASSWORD=postgres \
+  -p 5432:5432 \
+  -d postgres
+
+# Verify it's running
+docker ps
+
+# Create database
+docker exec -it postgres-dev psql -U postgres -c "CREATE DATABASE storefront_dev;"
+```
+
+Database sẽ chạy tại `localhost:5432` với credentials:
+- Database: `storefront_dev`
+- Username: `postgres`
+- Password: `postgres`
+
+### Option B: Local PostgreSQL
 
 1. **Cài đặt PostgreSQL** (nếu chưa có):
    - macOS: `brew install postgresql@14`
@@ -71,27 +95,10 @@ cd ../..
    # Login as postgres user
    psql postgres
    
-   # Create database and user
-   CREATE DATABASE ministore;
-   CREATE USER ministore_user WITH PASSWORD 'your_password';
-   GRANT ALL PRIVILEGES ON DATABASE ministore TO ministore_user;
+   # Create database
+   CREATE DATABASE storefront_dev;
    \q
    ```
-
-### Option B: Docker PostgreSQL
-
-```bash
-# Start postgres container
-docker-compose up -d postgres
-
-# Check container is running
-docker ps | grep postgres
-```
-
-Database sẽ chạy tại `localhost:5432` với credentials:
-- Database: `ministore`
-- Username: `postgres`
-- Password: `postgres`
 
 ---
 
@@ -103,8 +110,9 @@ Tạo file `.env` ở thư mục root:
 
 ```bash
 # .env
-DATABASE_URL="postgresql://ministore_user:your_password@localhost:5432/ministore?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/storefront_dev?schema=public"
 JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
+FRONTEND_URL="http://localhost:3000"
 ```
 
 ### 4.2. Backend `.env`
@@ -113,9 +121,9 @@ Tạo file `apps/backend/.env`:
 
 ```bash
 # apps/backend/.env
-DATABASE_URL="postgresql://ministore_user:your_password@localhost:5432/ministore?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/storefront_dev?schema=public"
 JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
-NODE_ENV="development"
+FRONTEND_URL="http://localhost:3000"
 ```
 
 ### 4.3. Frontend `.env.local`
@@ -134,18 +142,18 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 ## Step 5: Run Database Migrations (Postgres)
 
 ```bash
-# From repo root, go to backend app
+# From repo root - Generate Prisma Client
+yarn prisma:generate
+
+# Run migrations (creates tables from migration files)
+yarn prisma:migrate
+
+# Or from backend directory:
 cd apps/backend
+npx prisma migrate dev --schema=prisma/schema.postgres.prisma
 
-# Generate Prisma Client (uses apps/backend/prisma/schema.postgres.prisma)
-npx prisma generate --schema=prisma/schema.postgres.prisma
-
-# Push schema to Postgres (creates tables). For development use `db push`;
-# for production migrations use `prisma migrate deploy` after creating migrations.
-npx prisma db push --schema=prisma/schema.postgres.prisma
-
-# Check migration/schema success with Prisma Studio
-npx prisma studio --schema=prisma/schema.postgres.prisma
+# Check migration success with Prisma Studio
+yarn prisma:studio
 # Open http://localhost:5555 to inspect the DB
 ```
 
@@ -154,10 +162,11 @@ npx prisma studio --schema=prisma/schema.postgres.prisma
 ## Step 6: Seed Database with Sample Data
 
 ```bash
-# From repo root (or after cd apps/backend):
-cd apps/backend
+# From repo root:
+yarn seed
 
-# Run seed script (uses apps/backend/prisma/seed.ts)
+# Or from backend directory:
+cd apps/backend
 npx tsx prisma/seed.ts
 ```
 
@@ -368,6 +377,7 @@ yarn prisma:generate     # Generate Prisma Client
 yarn prisma:migrate      # Run migrations
 yarn prisma:studio       # Open Prisma Studio
 yarn seed                # Seed database
+yarn clear:db            # Reset DB and re-seed (⚠️ deletes all data)
 
 # Build
 yarn build               # Build both apps

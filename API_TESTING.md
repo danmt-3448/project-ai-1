@@ -187,16 +187,18 @@ Tạo order mới (transactional với inventory check).
 curl -X POST http://localhost:3001/api/checkout \
   -H "Content-Type: application/json" \
   -d '{
-    "buyerName": "Nguyen Van A",
-    "buyerEmail": "nguyenvana@example.com",
-    "address": "123 Nguyen Trai, Ha Noi",
+    "buyer": {
+      "name": "Nguyen Van A",
+      "email": "nguyenvana@example.com",
+      "address": "123 Nguyen Trai, Ha Noi"
+    },
     "items": [
       {
-        "productId": 1,
+        "productId": "cm...",
         "quantity": 2
       },
       {
-        "productId": 2,
+        "productId": "cm...",
         "quantity": 1
       }
     ]
@@ -218,12 +220,14 @@ curl -X POST http://localhost:3001/api/checkout \
 curl -X POST http://localhost:3001/api/checkout \
   -H "Content-Type: application/json" \
   -d '{
-    "buyerName": "Test User",
-    "buyerEmail": "test@example.com",
-    "address": "Test Address 123",
+    "buyer": {
+      "name": "Test User",
+      "email": "test@example.com",
+      "address": "Test Address 123 Main St"
+    },
     "items": [
       {
-        "productId": 1,
+        "productId": "cm...",
         "quantity": 9999
       }
     ]
@@ -243,10 +247,12 @@ curl -X POST http://localhost:3001/api/checkout \
 curl -X POST http://localhost:3001/api/checkout \
   -H "Content-Type: application/json" \
   -d '{
-    "buyerName": "Test",
-    "buyerEmail": "test@example.com",
-    "address": "Test Address",
-    "items": [{"productId": 1, "quantity": 1}],
+    "buyer": {
+      "name": "Test User",
+      "email": "test@example.com",
+      "address": "Test Address 123"
+    },
+    "items": [{"productId": "cm...", "quantity": 1}],
     "simulateFail": true
   }'
 ```

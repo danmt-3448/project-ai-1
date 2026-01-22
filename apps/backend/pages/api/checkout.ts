@@ -9,10 +9,14 @@ const checkoutItemSchema = z.object({
   quantity: z.number().int().positive().min(1),
 });
 
-const checkoutSchema = z.object({
-  buyerName: z.string().min(1, 'Buyer name is required'),
-  buyerEmail: z.string().email('Invalid email'),
+const buyerSchema = z.object({
+  name: z.string().min(1, 'Buyer name is required'),
+  email: z.string().email('Invalid email'),
   address: z.string().min(10, 'Address must be at least 10 characters'),
+});
+
+const checkoutSchema = z.object({
+  buyer: buyerSchema,
   items: z.array(checkoutItemSchema).min(1, 'At least one item is required'),
   simulateFail: z.boolean().optional(),
 });
@@ -33,7 +37,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       });
     }
 
-    const { buyerName, buyerEmail, address, items, simulateFail } = validationResult.data;
+    const { buyer, items, simulateFail } = validationResult.data;
+    const { name: buyerName, email: buyerEmail, address } = buyer;
 
     // Simulate failure if requested
     if (simulateFail) {
