@@ -1,6 +1,6 @@
-import '@testing-library/jest-dom'
-import { vi } from 'vitest'
-import React from 'react'
+import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+import React from 'react';
 
 // Mock Next.js router
 vi.mock('next/router', () => ({
@@ -10,15 +10,15 @@ vi.mock('next/router', () => ({
     query: {},
     asPath: '/',
   }),
-}))
+}));
 
 // Mock Next.js Image component
 vi.mock('next/image', () => ({
   __esModule: true,
   default: ({ src, alt, ...props }: any) => {
-    return React.createElement('img', { src, alt, ...props })
+    return React.createElement('img', { src, alt, ...props });
   },
-}))
+}));
 
 // Mock localStorage
 const localStorageMock = {
@@ -26,5 +26,5 @@ const localStorageMock = {
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
-}
-global.localStorage = localStorageMock as any
+};
+global.localStorage = localStorageMock as any;

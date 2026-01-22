@@ -3,7 +3,9 @@
 ## Prerequisites
 
 Đảm bảo bạn đã cài đặt:
-- **Node.js** v18+ và npm
+- **Node.js** v20 (we pin to Node 20 via `.nvmrc` files)
+- **nvm** (Node Version Manager) is recommended to switch Node versions
+- npm
 - **PostgreSQL** 14+ (local hoặc remote)
 - **Git**
 
@@ -20,12 +22,29 @@ cd project-ai-1
 
 ## Step 2: Install Dependencies
 
-```bash
-# Install all workspace dependencies
-npm install
-```
+This repo targets Node.js 20. Before installing packages, use `nvm` to pick Node 20. Each app (`apps/frontend`, `apps/backend`) also includes a local `.nvmrc` file.
 
-Lệnh này sẽ install dependencies cho cả root, backend và frontend.
+```bash
+# From repo root (reads root .nvmrc)
+nvm install
+nvm use
+
+# Install workspace deps (or per-app installs)
+npm install
+
+# Per-app (explicit):
+cd apps/backend
+nvm install
+nvm use
+npm install
+
+cd ../frontend
+nvm install
+nvm use
+npm install
+
+cd ../..
+```
 
 ---
 

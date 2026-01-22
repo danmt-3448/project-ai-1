@@ -5,6 +5,6 @@ const nextConfig = {
   images: {
     domains: ['localhost', 'placehold.co', 'images.unsplash.com', 'via.placeholder.com'],
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

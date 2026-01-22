@@ -64,6 +64,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] `npm run dev` chạy được backend trên port 3001
 - **Dependencies:** DB-02
 - **Files:** `apps/backend/package.json`, `apps/backend/tsconfig.json`, `apps/backend/next.config.js`
+- **Status:** ✅ Implemented (backend app present under `apps/backend`)
 
 #### BE-02: Setup Prisma client
 - **ID:** BE-02
@@ -77,6 +78,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] DATABASE_URL trong `.env`
 - **Dependencies:** BE-01, DB-02
 - **Files:** `apps/backend/lib/prisma.ts`
+- **Status:** ✅ Implemented (`apps/backend/lib/prisma.ts` exports singleton)
 
 #### BE-03: API GET /api/categories
 - **ID:** BE-03
@@ -91,6 +93,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] Test bằng curl/Postman
 - **Dependencies:** BE-02
 - **Files:** `apps/backend/pages/api/categories.ts`
+- **Status:** ✅ Implemented (`GET /api/categories` exists)
 
 #### BE-04: API GET /api/products với query params
 - **ID:** BE-04
@@ -106,6 +109,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] Search theo name và description (case-insensitive)
 - **Dependencies:** BE-02
 - **Files:** `apps/backend/pages/api/products/index.ts`
+- **Status:** ✅ Implemented (`GET /api/products` with filtering, pagination)
 
 #### BE-05: API GET /api/products/:slug
 - **ID:** BE-05
@@ -120,6 +124,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] Include category name trong response
 - **Dependencies:** BE-02
 - **Files:** `apps/backend/pages/api/products/[slug].ts`
+- **Status:** ✅ Implemented (`GET /api/products/:slug` exists and returns parsed images)
 
 ---
 
@@ -138,6 +143,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] `npm run dev` chạy được frontend trên port 3000
 - **Dependencies:** None
 - **Files:** `apps/frontend/package.json`, `apps/frontend/tailwind.config.js`
+- **Status:** ✅ Implemented (frontend app present under `apps/frontend`)
 
 #### FE-02: Tạo Layout component
 - **ID:** FE-02
@@ -168,6 +174,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] Responsive grid (1 col mobile, 2 tablet, 4 desktop)
 - **Dependencies:** FE-02, BE-03, BE-04
 - **Files:** `apps/frontend/pages/index.tsx`
+- **Status:** ✅ Implemented (`apps/frontend/pages/index.tsx` uses API client)
 
 #### FE-04: Component ProductCard
 - **ID:** FE-04
@@ -183,6 +190,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] Format giá VND
 - **Dependencies:** FE-01
 - **Files:** `apps/frontend/components/ProductCard.tsx`
+- **Status:** ✅ Implemented (`ProductCard` component exists)
 
 #### FE-05: Component ProductList
 - **ID:** FE-05
@@ -211,6 +219,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] Pagination (optional)
 - **Dependencies:** FE-05, BE-04
 - **Files:** `apps/frontend/pages/category/[slug].tsx`
+- **Note:** actual frontend path is `apps/frontend/pages/categories/[slug].tsx` (plural). Update routing tasks to match repo.
 
 #### FE-07: Setup API client và hooks
 - **ID:** FE-07
@@ -286,13 +295,13 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
 
 ### Frontend Sprint 2
 
-#### FE-08: Trang Product Detail (/product/[slug])
+#### FE-08: Trang Product Detail (/products/[slug])
 - **ID:** FE-08
 - **Estimate:** 6h
 - **Assignee:** Frontend Dev
 - **Description:** Tạo trang chi tiết sản phẩm
 - **Acceptance Criteria:**
-  - [ ] File `pages/product/[slug].tsx`
+  - [ ] File `pages/products/[slug].tsx`
   - [ ] Fetch từ `/api/products/:slug`
   - [ ] Display: images carousel, name, price, description, stock
   - [ ] Quantity selector (1-10)
@@ -302,6 +311,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] SEO meta tags
 - **Dependencies:** BE-05, FE-09
 - **Files:** `apps/frontend/pages/product/[slug].tsx`
+- **Status:** ✅ Implemented (`apps/frontend/pages/products/[slug].tsx`)
 
 #### FE-09: Implement Cart state management
 - **ID:** FE-09
@@ -317,6 +327,8 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] Type-safe cart item interface
 - **Dependencies:** FE-01
 - **Files:** `apps/frontend/context/CartContext.tsx`
+- **Note:** this project uses `apps/frontend/store/cartStore.ts` (Zustand) with persistence — implemented.
+- **Status:** ✅ Implemented (`apps/frontend/store/cartStore.ts`)
 
 #### FE-10: Component CartItem và CartSummary
 - **ID:** FE-10
@@ -347,6 +359,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] Proceed to checkout button (link to /checkout)
 - **Dependencies:** FE-10
 - **Files:** `apps/frontend/pages/cart.tsx`
+- **Status:** ✅ Implemented (`apps/frontend/pages/cart.tsx`)
 
 #### FE-12: Add product images carousel
 - **ID:** FE-12
@@ -388,6 +401,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] Simulate fail with `simulate=fail` param
 - **Dependencies:** BE-02, DB-01
 - **Files:** `apps/backend/pages/api/checkout.ts`
+- **Status:** ✅ Implemented (transactional checkout with `simulateFail` support)
 
 #### BE-08: API GET /api/orders/:id
 - **ID:** BE-08
@@ -473,6 +487,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] 401 nếu sai credentials
 - **Dependencies:** BE-02, DB-03
 - **Files:** `apps/backend/pages/api/admin/login.ts`
+- **Status:** ✅ Implemented (returns JWT and admin info)
 
 #### BE-10: Middleware verify JWT
 - **ID:** BE-10

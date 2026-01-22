@@ -1,38 +1,37 @@
-import { useRouter } from 'next/router'
-import useSWR from 'swr'
-import Head from 'next/head'
-import Link from 'next/link'
-import { api } from '@/lib/api'
+import { useRouter } from 'next/router';
+import useSWR from 'swr';
+import Head from 'next/head';
+import Link from 'next/link';
+import { api } from '@/lib/api';
 
 interface Order {
-  id: number
-  buyerName: string
-  buyerEmail: string
-  address: string
-  total: number
-  status: string
-  createdAt: string
+  id: number;
+  buyerName: string;
+  buyerEmail: string;
+  address: string;
+  total: number;
+  status: string;
+  createdAt: string;
   items: Array<{
-    id: number
-    productId: number
-    name: string
-    price: number
-    quantity: number
+    id: number;
+    productId: number;
+    name: string;
+    price: number;
+    quantity: number;
     product: {
-      slug: string
-      images: string[]
-    }
-  }>
+      slug: string;
+      images: string[];
+    };
+  }>;
 }
 
 export default function OrderDetail() {
-  const router = useRouter()
-  const { id } = router.query
+  const router = useRouter();
+  const { id } = router.query;
 
-  const { data: order, error } = useSWR<Order>(
-    id ? `/api/orders/${id}` : null,
-    () => api.getOrder(parseInt(id as string, 10))
-  )
+  const { data: order, error } = useSWR<Order>(id ? `/api/orders/${id}` : null, () =>
+    api.getOrder(parseInt(id as string, 10))
+  );
 
   if (error) {
     return (
@@ -41,30 +40,30 @@ export default function OrderDetail() {
           <title>Order Not Found - Mini Store</title>
         </Head>
 
-        <div className="max-w-4xl mx-auto text-center py-12">
-          <h1 className="text-3xl font-bold text-red-500 mb-4">Order Not Found</h1>
-          <p className="text-gray-600 mb-8">The order you're looking for doesn't exist</p>
+        <div className="mx-auto max-w-4xl py-12 text-center">
+          <h1 className="mb-4 text-3xl font-bold text-red-500">Order Not Found</h1>
+          <p className="mb-8 text-gray-600">The order you're looking for doesn't exist</p>
           <Link
             href="/"
-            className="inline-block bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-dark transition-colors"
+            className="inline-block rounded-lg bg-primary px-6 py-3 font-semibold text-white transition-colors hover:bg-primary-dark"
           >
             Go to Home
           </Link>
         </div>
       </>
-    )
+    );
   }
 
   if (!order) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="mx-auto max-w-4xl">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="h-8 w-1/4 rounded bg-gray-200"></div>
+          <div className="h-32 rounded bg-gray-200"></div>
+          <div className="h-64 rounded bg-gray-200"></div>
         </div>
       </div>
-    )
+    );
   }
 
   const statusColors: Record<string, string> = {
@@ -73,7 +72,7 @@ export default function OrderDetail() {
     shipped: 'bg-purple-100 text-purple-800',
     delivered: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
-  }
+  };
 
   return (
     <>
@@ -81,12 +80,12 @@ export default function OrderDetail() {
         <title>Order #{order.id} - Mini Store</title>
       </Head>
 
-      <div className="max-w-4xl mx-auto">
+      <div className="mx-auto max-w-4xl">
         {/* Success Message */}
-        <div className="bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-lg mb-8">
+        <div className="mb-8 rounded-lg border border-green-200 bg-green-50 px-6 py-4 text-green-800">
           <div className="flex items-start">
             <svg
-              className="w-6 h-6 mr-3 flex-shrink-0"
+              className="mr-3 h-6 w-6 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -99,7 +98,7 @@ export default function OrderDetail() {
               />
             </svg>
             <div>
-              <h2 className="font-bold text-lg mb-1">Order Placed Successfully!</h2>
+              <h2 className="mb-1 text-lg font-bold">Order Placed Successfully!</h2>
               <p>
                 Thank you for your order. We've sent a confirmation email to{' '}
                 <strong>{order.buyerEmail}</strong>
@@ -109,16 +108,16 @@ export default function OrderDetail() {
         </div>
 
         {/* Order Details */}
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-          <div className="flex justify-between items-start mb-6">
+        <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold mb-2">Order #{order.id}</h1>
-              <p className="text-gray-600 text-sm">
+              <h1 className="mb-2 text-2xl font-bold">Order #{order.id}</h1>
+              <p className="text-sm text-gray-600">
                 Placed on {new Date(order.createdAt).toLocaleDateString('vi-VN')}
               </p>
             </div>
             <span
-              className={`px-3 py-1 rounded-full text-sm font-semibold ${
+              className={`rounded-full px-3 py-1 text-sm font-semibold ${
                 statusColors[order.status] || 'bg-gray-100 text-gray-800'
               }`}
             >
@@ -126,34 +125,34 @@ export default function OrderDetail() {
             </span>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 border-t pt-6">
+          <div className="grid gap-6 border-t pt-6 md:grid-cols-2">
             <div>
-              <h3 className="font-semibold mb-2">Shipping Address</h3>
+              <h3 className="mb-2 font-semibold">Shipping Address</h3>
               <p className="text-gray-700">{order.buyerName}</p>
-              <p className="text-gray-600 text-sm">{order.address}</p>
+              <p className="text-sm text-gray-600">{order.address}</p>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">Contact Information</h3>
+              <h3 className="mb-2 font-semibold">Contact Information</h3>
               <p className="text-gray-700">{order.buyerEmail}</p>
             </div>
           </div>
         </div>
 
         {/* Order Items */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <h2 className="text-xl font-bold mb-4">Order Items</h2>
+        <div className="rounded-lg border bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-xl font-bold">Order Items</h2>
 
           <div className="space-y-4">
             {order.items.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center gap-4 pb-4 border-b last:border-b-0 last:pb-0"
+                className="flex items-center gap-4 border-b pb-4 last:border-b-0 last:pb-0"
               >
-                <div className="relative w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
                   <img
                     src={item.product.images[0] || '/placeholder-product.png'}
                     alt={item.name}
-                    className="object-cover w-full h-full"
+                    className="h-full w-full object-cover"
                   />
                 </div>
 
@@ -178,7 +177,7 @@ export default function OrderDetail() {
             ))}
           </div>
 
-          <div className="border-t mt-6 pt-6 space-y-2">
+          <div className="mt-6 space-y-2 border-t pt-6">
             <div className="flex justify-between text-gray-700">
               <span>Subtotal</span>
               <span>{order.total.toLocaleString('vi-VN')} ₫</span>
@@ -187,7 +186,7 @@ export default function OrderDetail() {
               <span>Shipping</span>
               <span className="text-green-600">Free</span>
             </div>
-            <div className="flex justify-between text-xl font-bold border-t pt-2">
+            <div className="flex justify-between border-t pt-2 text-xl font-bold">
               <span>Total</span>
               <span className="text-primary">{order.total.toLocaleString('vi-VN')} ₫</span>
             </div>
@@ -195,21 +194,21 @@ export default function OrderDetail() {
         </div>
 
         {/* Actions */}
-        <div className="mt-8 flex flex-col sm:flex-row gap-4">
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row">
           <Link
             href="/"
-            className="flex-1 text-center bg-primary text-white py-3 px-6 rounded-lg font-semibold hover:bg-primary-dark transition-colors"
+            className="flex-1 rounded-lg bg-primary px-6 py-3 text-center font-semibold text-white transition-colors hover:bg-primary-dark"
           >
             Continue Shopping
           </Link>
           <button
             onClick={() => window.print()}
-            className="flex-1 text-center bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+            className="flex-1 rounded-lg bg-gray-100 px-6 py-3 text-center font-semibold text-gray-700 transition-colors hover:bg-gray-200"
           >
             Print Order
           </button>
         </div>
       </div>
     </>
-  )
+  );
 }

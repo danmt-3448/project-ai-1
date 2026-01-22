@@ -26,6 +26,53 @@ Dựa trên đặc tả trong `specs.md`, document này phân tích, lên kế h
 
 ## 2. Roadmap tổng thể — 5 Sprint (2 tuần/sprint)
 
+## Current Implementation (snapshot)
+
+This project already implements many core features — updating the plan to match the codebase.
+
+- Backend (implemented):
+  - `GET /api/categories` — implemented ([apps/backend/pages/api/categories.ts](apps/backend/pages/api/categories.ts#L1)).
+  - `GET /api/products` — implemented with `category`, `search`, `page`, `limit` support; returns parsed `images` arrays in responses ([apps/backend/pages/api/products/index.ts](apps/backend/pages/api/products/index.ts#L1)).
+  - `GET /api/products/:slug` — implemented; returns product + `category`, parses `images` ([apps/backend/pages/api/products/[slug].ts](apps/backend/pages/api/products/[slug].ts#L1)).
+  - `POST /api/checkout` — implemented with Zod validation and Prisma transaction; supports `simulateFail` ([apps/backend/pages/api/checkout.ts](apps/backend/pages/api/checkout.ts#L1)).
+  - `GET /api/orders/:id` — implemented and enriches items with product slug/images ([apps/backend/pages/api/orders/[id].ts](apps/backend/pages/api/orders/[id].ts#L1)).
+  - Admin endpoints: `POST /api/admin/login` and admin product CRUD under `/api/admin/products` implemented; admin routes protected with `requireAdmin` helper in `apps/backend/lib/auth.ts`.
+  - `lib/prisma.ts` exports a singleton Prisma client; `lib/cors.ts` and `lib/auth.ts` exist for CORS and auth.
+
+- Frontend (implemented):
+  - Home page `/` fetches categories and products ([apps/frontend/pages/index.tsx](apps/frontend/pages/index.tsx#L1)).
+  - Product detail `/products/[slug]` implemented ([apps/frontend/pages/products/[slug].tsx](apps/frontend/pages/products/[slug].tsx#L1)).
+  - Cart page `/cart` and Zustand store `apps/frontend/store/cartStore.ts` with localStorage persistence implemented ([apps/frontend/pages/cart.tsx](apps/frontend/pages/cart.tsx#L1)).
+  - Checkout page `/checkout` and Order confirmation page `/order/[id]` implemented and wired to backend endpoints.
+
+Notes:
+- Product `images` are stored as JSON strings in the DB and parsed to arrays in API responses.
+- Admin auth exists (`/api/admin/login`) and admin routes use `requireAdmin` middleware (JWT) defined in `apps/backend/lib/auth.ts`.
+
+## Updated Sprint Status (align with code)
+
+- Sprint 1: Foundation — **Done** (DB client, categories/products endpoints, frontend home)
+- Sprint 2: Cart & Product Detail — **Done** (product pages, cart store, cart page)
+- Sprint 3: Checkout & Order Flow — **Mostly Done**
+  - Backend `POST /api/checkout` and `GET /api/orders/:id` implemented ✅
+  - Frontend `checkout` and `order` pages implemented ✅
+  - Remaining: add more integration tests and edge-case tests (concurrent checkout race conditions)
+- Sprint 4: Admin Panel & Auth — **Partially Done**
+  - Backend admin APIs (products CRUD, protected) implemented ✅
+  - Frontend admin pages exist under `apps/frontend/pages/admin` (some pages implemented) — remaining work: finish admin UI flows, token storage, protected-route HOC, and polish UX.
+- Sprint 5: Testing, Polish & Deploy — **In progress**
+  - Many tests not yet added or incomplete. CI / Docker needs verification.
+
+## Minimal plan updates / next actions (recommended)
+
+1. Update `context/tasks.md` to mark implemented tasks as completed (many were updated already).
+2. Add/expand tests:
+   - Backend unit tests for products and checkout (including `simulateFail` and insufficient-inventory cases).
+   - Integration test for concurrent checkouts (race condition).
+   - Frontend tests for `store/cartStore.ts` and components (`ProductCard`, `Cart`).
+3. Finish admin UI: implement token storage (localStorage/cookie), protected-route HOC, and admin product/category pages flows.
+4. CI & Deploy: verify GitHub Actions workflow, Docker compose, and run `pnpm`/`npm` scripts to ensure dev environment matches plan.
+5. Docs: add `Implementation status` block to `README.md` and keep `context/specs.md` / `context/tasks.md` synchronized.
 ### Sprint 1: Foundation & Data Setup (2 tuần)
 **Mục tiêu:** Thiết lập cơ sở hạ tầng, DB schema, seed data, backend CRUD cơ bản, FE layout cơ bản.
 

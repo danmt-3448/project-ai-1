@@ -52,7 +52,7 @@ This document describes expectations and rules for contributing to this Next.js 
 
 ## Docker & Deployment Rules
 
-- Docker images must be built with a reproducible Node.js base (e.g., `node:18-alpine`).
+- Docker images must be built with a reproducible Node.js base (e.g., `node:20-alpine`).
 - Reduce image size by installing only production dependencies in final images.
 - CI must build the image and run smoke tests before tagging.
 

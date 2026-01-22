@@ -1,27 +1,27 @@
-import { NextApiRequest, NextApiResponse } from 'next'
-import jwt from 'jsonwebtoken'
-import { cors } from './cors'
+import { NextApiRequest, NextApiResponse } from 'next';
+import jwt from 'jsonwebtoken';
+import { cors } from './cors';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 export interface AuthRequest extends NextApiRequest {
-  adminId?: number
+  adminId?: number;
 }
 
 export function verifyAdminToken(req: AuthRequest): number | null {
-  const authHeader = req.headers.authorization
+  const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null
+    return null;
   }
 
-  const token = authHeader.substring(7)
+  const token = authHeader.substring(7);
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { adminId: number }
-    return decoded.adminId
+    const decoded = jwt.verify(token, JWT_SECRET) as { adminId: number };
+    return decoded.adminId;
   } catch (error) {
-    return null
+    return null;
   }
 }
 
@@ -30,15 +30,15 @@ export function requireAdmin(
 ) {
   return async (req: AuthRequest, res: NextApiResponse) => {
     // Apply CORS first
-    if (cors(req, res)) return
+    if (cors(req, res)) return;
 
-    const adminId = verifyAdminToken(req)
+    const adminId = verifyAdminToken(req);
 
     if (!adminId) {
-      return res.status(401).json({ error: 'Unauthorized' })
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    req.adminId = adminId
-    return handler(req, res)
-  }
+    req.adminId = adminId;
+    return handler(req, res);
+  };
 }

@@ -18,8 +18,9 @@ Trình tự khuyến khích:
 2. **Viết test mô tả kỳ vọng/chấp nhận (acceptance/unit/integration/E2E)**:
    - Đủ test case, bao cả case success, fail, edge case.
    - Tên test, mô tả rõ ràng, mapping với feature/user story.
-   - Đối với FE: dùng Jest + Testing Library, Vitest, Playwright, Cypress tùy phạm vi.
-   - Đối với BE: Jest, Vitest, Supertest, hoặc tool phù hợp stack.
+   - Đối với FE: dùng **Vitest** + Testing Library (configured in apps/frontend/vitest.config.ts).
+   - Đối với BE: **Vitest** (configured in apps/backend/vitest.config.ts).
+   - E2E: **Playwright** (playwright.config.ts at root).
 3. **Chạy test lần đầu (RED)** — test fail vì chưa có/bổ sung logic.
 4. **Viết code phần chính để pass test (GREEN)**.
    - Đảm bảo code mới chỉ đủ cho test qua, không over-engineer.
@@ -61,11 +62,19 @@ Implement tasks từ `context/tasks.md` theo quy trình TDD đơn giản:
 
 ### Ví dụ Flow TDD cho một backend API (checkout):
 
-1. **Viết test (Jest/Supertest):**
-    - Test trả về 400 khi thiếu stock, test tạo order khi đủ stock, test validate input không hợp lệ…
+1. **Viết test (Vitest):**
+    - Test trả về 400 khi thiếu stock
+    - Test tạo order và decrement inventory khi đủ stock
+    - Test validate input không hợp lệ (Zod schema)
+    - Test simulateFail flag
 2. **Chạy test --> FAIL**
-3. **Viết code xử lý /sửa code --> test pass**
+3. **Viết code xử lý:**
+    - Implement POST /api/checkout với Prisma transaction
+    - Zod validation cho buyerName, buyerEmail, address, items
+    - Inventory check và decrement trong transaction
 4. **Review: refactor code/test nếu cần**
+
+Xem implementation hiện tại: `apps/backend/pages/api/checkout.ts`
 
 ---
 
@@ -74,13 +83,20 @@ Implement tasks từ `context/tasks.md` theo quy trình TDD đơn giản:
 ```
 ## Feature: Checkout API (Backend)
 
-### Test Cases (Jest + Supertest)
+### Test Cases (Vitest)
 - [ ] Should return 400 if product out of stock
 - [ ] Should create order and decrement inventory on success
-- [ ] Should reject if buyer info missing
+- [ ] Should reject if buyer info missing (Zod validation)
+- [ ] Should handle simulateFail flag
 
 ```ts
-test('Should return 400 if product out of stock', async () => { ... })
+import { describe, it, expect } from 'vitest'
+
+describe('POST /api/checkout', () => {
+  it('should return 400 if product out of stock', async () => {
+    // Test implementation with Prisma mock or test DB
+  })
+})
 ```
 
 ### Implementation Snippet (only after test written)

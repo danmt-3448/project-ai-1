@@ -21,7 +21,7 @@ A minimal online store built with Next.js, TypeScript, and PostgreSQL.
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 20+ (we provide `.nvmrc` files; use `nvm use` before installing)
 - PostgreSQL database
 - npm or pnpm
 
@@ -33,11 +33,21 @@ git clone <repo-url>
 cd mini-storefront
 ```
 
-2. Install dependencies:
+2. Install dependencies (use Node 20 via `nvm`):
+
+Before installing, ensure you're on Node 20 (the repo and apps include `.nvmrc`):
+
 ```bash
+# From repo root (recommended)
+nvm install          # installs Node 20 if missing (reads root .nvmrc)
+nvm use
+
+# Then install packages (workspace-aware installer preferred, or per-app):
 npm install
-cd apps/backend && npm install
-cd ../frontend && npm install
+
+# Or per-app (ensure to `nvm use` inside each app folder which has its own .nvmrc):
+cd apps/backend && nvm install && nvm use && npm install
+cd ../frontend && nvm install && nvm use && npm install
 cd ../..
 ```
 

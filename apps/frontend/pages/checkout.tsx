@@ -1,48 +1,48 @@
-import { useState } from 'react'
-import Head from 'next/head'
-import { useRouter } from 'next/router'
-import { useCartStore } from '@/store/cartStore'
-import { api } from '@/lib/api'
+import { useState } from 'react';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+import { useCartStore } from '@/store/cartStore';
+import { api } from '@/lib/api';
 
 export default function Checkout() {
-  const router = useRouter()
-  const { items, getSubtotal, clearCart } = useCartStore()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const { items, getSubtotal, clearCart } = useCartStore();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     buyerName: '',
     buyerEmail: '',
     address: '',
-  })
+  });
 
-  const subtotal = getSubtotal()
+  const subtotal = getSubtotal();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     try {
       const checkoutItems = items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
-      }))
+      }));
 
       const result = await api.checkout({
         ...formData,
         items: checkoutItems,
-      })
+      });
 
       // Clear cart and redirect to success page
-      clearCart()
-      router.push(`/order/${result.orderId}`)
+      clearCart();
+      router.push(`/order/${result.orderId}`);
     } catch (err: any) {
-      console.error('Checkout error:', err)
-      setError(err.response?.data?.message || err.message || 'Failed to process checkout')
-      setLoading(false)
+      console.error('Checkout error:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to process checkout');
+      setLoading(false);
     }
-  }
+  };
 
   if (items.length === 0) {
     return (
@@ -51,18 +51,20 @@ export default function Checkout() {
           <title>Checkout - Mini Store</title>
         </Head>
 
-        <div className="max-w-4xl mx-auto text-center py-20">
-          <h1 className="text-5xl font-extrabold mb-4 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Your cart is empty</h1>
-          <p className="text-xl text-gray-600 mb-8">Add some products before checking out 🛍️</p>
+        <div className="mx-auto max-w-4xl py-20 text-center">
+          <h1 className="mb-4 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-5xl font-extrabold text-transparent">
+            Your cart is empty
+          </h1>
+          <p className="mb-8 text-xl text-gray-600">Add some products before checking out 🛍️</p>
           <button
             onClick={() => router.push('/')}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl hover:scale-105 transition-all"
+            className="rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-4 text-lg font-bold text-white transition-all hover:scale-105 hover:shadow-xl"
           >
             Continue Shopping
           </button>
         </div>
       </>
-    )
+    );
   }
 
   return (
@@ -71,17 +73,19 @@ export default function Checkout() {
         <title>Checkout - Mini Store</title>
       </Head>
 
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-5xl font-extrabold mb-8 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">💳 Checkout</h1>
+      <div className="mx-auto max-w-4xl">
+        <h1 className="mb-8 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-5xl font-extrabold text-transparent">
+          💳 Checkout
+        </h1>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid gap-8 md:grid-cols-2">
           {/* Checkout Form */}
           <div>
-            <h2 className="text-3xl font-extrabold mb-6 text-gray-800">📦 Shipping Information</h2>
+            <h2 className="mb-6 text-3xl font-extrabold text-gray-800">📦 Shipping Information</h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="buyerName" className="block text-base font-bold mb-2 text-gray-700">
+                <label htmlFor="buyerName" className="mb-2 block text-base font-bold text-gray-700">
                   Full Name *
                 </label>
                 <input
@@ -90,13 +94,16 @@ export default function Checkout() {
                   required
                   value={formData.buyerName}
                   onChange={(e) => setFormData({ ...formData, buyerName: e.target.value })}
-                  className="w-full px-5 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                  className="w-full rounded-xl border-2 border-purple-200 px-5 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="John Doe"
                 />
               </div>
 
               <div>
-                <label htmlFor="buyerEmail" className="block text-base font-bold mb-2 text-gray-700">
+                <label
+                  htmlFor="buyerEmail"
+                  className="mb-2 block text-base font-bold text-gray-700"
+                >
                   Email *
                 </label>
                 <input
@@ -105,13 +112,13 @@ export default function Checkout() {
                   required
                   value={formData.buyerEmail}
                   onChange={(e) => setFormData({ ...formData, buyerEmail: e.target.value })}
-                  className="w-full px-5 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                  className="w-full rounded-xl border-2 border-purple-200 px-5 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="john@example.com"
                 />
               </div>
 
               <div>
-                <label htmlFor="address" className="block text-base font-bold mb-2 text-gray-700">
+                <label htmlFor="address" className="mb-2 block text-base font-bold text-gray-700">
                   Shipping Address *
                 </label>
                 <textarea
@@ -120,14 +127,14 @@ export default function Checkout() {
                   rows={4}
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-5 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-base"
+                  className="w-full resize-none rounded-xl border-2 border-purple-200 px-5 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="123 Main St, City, Country"
                   minLength={10}
                 />
               </div>
 
               {error && (
-                <div className="bg-red-50 border-2 border-red-300 text-red-700 px-5 py-4 rounded-xl font-semibold">
+                <div className="rounded-xl border-2 border-red-300 bg-red-50 px-5 py-4 font-semibold text-red-700">
                   ⚠️ {error}
                 </div>
               )}
@@ -135,7 +142,7 @@ export default function Checkout() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-6 rounded-xl font-bold text-lg hover:shadow-xl hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4 text-lg font-bold text-white transition-all hover:scale-105 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
               >
                 {loading ? '⏳ Processing...' : '📦 Place Order'}
               </button>
@@ -144,14 +151,14 @@ export default function Checkout() {
 
           {/* Order Summary */}
           <div>
-            <h2 className="text-3xl font-extrabold mb-6 text-gray-800">📊 Order Summary</h2>
+            <h2 className="mb-6 text-3xl font-extrabold text-gray-800">📊 Order Summary</h2>
 
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-purple-200 shadow-xl space-y-6">
+            <div className="space-y-6 rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-8 shadow-xl">
               {/* Items */}
               <div className="space-y-4 border-b-2 border-purple-200 pb-6">
                 {items.map((item) => (
                   <div key={item.productId} className="flex justify-between text-base">
-                    <span className="text-gray-700 font-semibold">
+                    <span className="font-semibold text-gray-700">
                       {item.name} × {item.quantity}
                     </span>
                     <span className="font-bold text-purple-600">
@@ -163,31 +170,33 @@ export default function Checkout() {
 
               {/* Totals */}
               <div className="space-y-3">
-                <div className="flex justify-between text-gray-700 text-lg">
+                <div className="flex justify-between text-lg text-gray-700">
                   <span className="font-semibold">Subtotal</span>
                   <span className="font-bold">{subtotal.toLocaleString('vi-VN')} ₫</span>
                 </div>
-                <div className="flex justify-between text-gray-700 text-lg">
+                <div className="flex justify-between text-lg text-gray-700">
                   <span className="font-semibold">Shipping</span>
-                  <span className="text-green-600 font-bold">Free 🚚</span>
+                  <span className="font-bold text-green-600">Free 🚚</span>
                 </div>
-                <div className="border-t-2 border-purple-300 pt-4 flex justify-between text-2xl font-extrabold">
+                <div className="flex justify-between border-t-2 border-purple-300 pt-4 text-2xl font-extrabold">
                   <span>Total</span>
-                  <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{subtotal.toLocaleString('vi-VN')} ₫</span>
+                  <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    {subtotal.toLocaleString('vi-VN')} ₫
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 bg-blue-50 border-2 border-blue-300 text-blue-700 px-5 py-4 rounded-xl">
-              <p className="font-bold mb-2 text-lg">💡 Note:</p>
-              <p className="font-semibold text-base">
-                This is a demo checkout. No actual payment will be processed. Your order will
-                be created for demonstration purposes.
+            <div className="mt-6 rounded-xl border-2 border-blue-300 bg-blue-50 px-5 py-4 text-blue-700">
+              <p className="mb-2 text-lg font-bold">💡 Note:</p>
+              <p className="text-base font-semibold">
+                This is a demo checkout. No actual payment will be processed. Your order will be
+                created for demonstration purposes.
               </p>
             </div>
           </div>
         </div>
       </div>
     </>
-  )
+  );
 }

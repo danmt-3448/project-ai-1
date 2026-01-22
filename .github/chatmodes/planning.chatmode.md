@@ -40,24 +40,68 @@ Giúp team tổ chức, lên kế hoạch và phân chia công việc (planning/
 
 ### ⏩ Roadmap/Sprint & Milestone Sample
 ```
-Sprint 1: Data model, backend CRUD, public product listing
-- Thiết kế Prisma schema & seed data
-- API endpoint: product, category
-- FE page: home, product listing
-- Acceptance: seed xong, FE fetch được data list
+Sprint 1: Foundation & Data Setup (✅ DONE)
+- Prisma schema (Category, Product, Order, OrderItem, AdminUser)
+- Seed data script
+- Backend APIs: GET /api/categories, /api/products, /api/products/:slug
+- Frontend: Home page, ProductCard component
+- Zustand cart store with localStorage
 
-Sprint 2: Cart, add-to-cart, cart page
-...
+Sprint 2: Cart & Product Detail (✅ DONE)
+- Product detail page (/products/[slug])
+- Cart page with Zustand store
+- Add to cart, update quantity, remove item
+- Categories page
 
-Sprint 3: ...
+Sprint 3: Checkout & Orders (✅ MOSTLY DONE)
+- POST /api/checkout with transaction
+- GET /api/orders/:id
+- Checkout page with form validation (Zod)
+- Order confirmation page
+- Remaining: integration tests
+
+Sprint 4: Admin Panel (🔄 IN PROGRESS)
+- POST /api/admin/login (JWT)
+- Admin product CRUD with requireAdmin middleware
+- Admin pages structure exists
+- Remaining: finish admin UI flows
+
+Sprint 5: Testing & Deploy (📋 PLANNED)
+- Unit tests (Vitest)
+- E2E tests (Playwright)
+- CI/CD updates
+- Production deployment
 ```
 
 ### ⏩ Backlog Features Checklist Sample
 ```
-- [ ] Backend: Model Product, Category (Prisma)
-- [ ] API: GET /categories, /products
-- [ ] FE: Trang Home, List Category/Product
-...
+Completed:
+- [x] Backend: Prisma schema (Product, Category, Order, OrderItem, AdminUser)
+- [x] Backend: lib/prisma.ts, lib/cors.ts, lib/auth.ts
+- [x] API: GET /api/categories, /api/products, /api/products/:slug
+- [x] API: POST /api/checkout (transactional with Zod validation)
+- [x] API: GET /api/orders/:id
+- [x] API: POST /api/admin/login (JWT)
+- [x] API: Admin product CRUD (/api/admin/products with requireAdmin)
+- [x] FE: Home page with category filter
+- [x] FE: Product detail page (/products/[slug])
+- [x] FE: Cart store (Zustand + localStorage)
+- [x] FE: Cart page
+- [x] FE: Checkout page
+- [x] FE: Order confirmation page
+
+In Progress:
+- [ ] Admin UI: token storage, protected routes HOC
+- [ ] Admin UI: product management pages polish
+- [ ] Admin UI: categories management
+- [ ] Admin UI: orders list
+
+Remaining:
+- [ ] Backend tests: Vitest for checkout, products APIs
+- [ ] Frontend tests: Vitest for cart store, components
+- [ ] E2E tests: Playwright flows
+- [ ] CI/CD verification
+- [ ] Production deployment
 ```
 
 ### ⏩ Acceptance Criteria Example

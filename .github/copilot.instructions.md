@@ -80,7 +80,7 @@ Tất cả đều được tối ưu hóa cho việc deploy trên [Vercel](https
 
 **Ví dụ Dockerfile:**
 ```Dockerfile
-FROM node:18-alpine
+FROM node:20-alpine
 WORKDIR /app
 COPY . .
 RUN yarn install --frozen-lockfile

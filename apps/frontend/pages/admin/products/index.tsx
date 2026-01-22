@@ -1,121 +1,115 @@
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
-import useSWR from 'swr'
-import Head from 'next/head'
-import Link from 'next/link'
-import Image from 'next/image'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import useSWR from 'swr';
+import Head from 'next/head';
+import Link from 'next/link';
+import Image from 'next/image';
 
 interface Product {
-  id: string
-  name: string
-  slug: string
-  description: string
-  price: number
-  inventory: number
-  published: boolean
-  images: string[]
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  inventory: number;
+  published: boolean;
+  images: string[];
   category: {
-    id: string
-    name: string
-    slug: string
-  }
-  createdAt: string
-  updatedAt: string
+    id: string;
+    name: string;
+    slug: string;
+  };
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface ProductsResponse {
-  data: Product[]
-  total: number
-  page: number
-  limit: number
-  totalPages: number
+  data: Product[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export default function AdminProducts() {
-  const router = useRouter()
-  const [token, setToken] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1)
-  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const router = useRouter();
+  const [token, setToken] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    const adminToken = localStorage.getItem('adminToken')
+    const adminToken = localStorage.getItem('adminToken');
     if (!adminToken) {
-      router.push('/admin')
-      return
+      router.push('/admin');
+      return;
     }
-    setToken(adminToken)
-  }, [router])
+    setToken(adminToken);
+  }, [router]);
 
   const fetcher = async (url: string) => {
     const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    })
-    if (!res.ok) throw new Error('Failed to fetch')
-    return res.json()
-  }
+    });
+    if (!res.ok) throw new Error('Failed to fetch');
+    return res.json();
+  };
 
   const { data, error, mutate } = useSWR<ProductsResponse>(
     token
       ? `${process.env.NEXT_PUBLIC_API_URL}/admin/products?page=${page}&limit=20&search=${search}`
       : null,
     fetcher
-  )
+  );
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return
+    if (!confirm('Are you sure you want to delete this product?')) return;
 
     try {
-      setDeleteId(id)
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/products/${id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
+      setDeleteId(id);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/products/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      if (!res.ok) throw new Error('Failed to delete')
+      if (!res.ok) throw new Error('Failed to delete');
 
-      mutate()
-      alert('Product deleted successfully')
+      mutate();
+      alert('Product deleted successfully');
     } catch (error) {
-      alert('Failed to delete product')
+      alert('Failed to delete product');
     } finally {
-      setDeleteId(null)
+      setDeleteId(null);
     }
-  }
+  };
 
   const handleTogglePublish = async (product: Product) => {
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/products/${product.id}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            published: !product.published,
-          }),
-        }
-      )
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/products/${product.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          published: !product.published,
+        }),
+      });
 
-      if (!res.ok) throw new Error('Failed to update')
+      if (!res.ok) throw new Error('Failed to update');
 
-      mutate()
+      mutate();
     } catch (error) {
-      alert('Failed to update product')
+      alert('Failed to update product');
     }
-  }
+  };
 
   if (!token) {
-    return <div className="text-center py-12">Loading...</div>
+    return <div className="py-12 text-center">Loading...</div>;
   }
 
   return (
@@ -124,25 +118,23 @@ export default function AdminProducts() {
         <title>Manage Products - Admin</title>
       </Head>
 
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Manage Products</h1>
-            <p className="text-gray-600">
-              {data?.total || 0} products total
-            </p>
+            <h1 className="mb-2 text-3xl font-bold">Manage Products</h1>
+            <p className="text-gray-600">{data?.total || 0} products total</p>
           </div>
           <div className="flex gap-3">
             <Link
               href="/admin/dashboard"
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              className="rounded-lg bg-gray-100 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-200"
             >
               ← Back
             </Link>
             <Link
               href="/admin/products/create"
-              className="px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-colors"
+              className="rounded-lg bg-primary px-6 py-2 font-semibold text-white transition-colors hover:bg-primary-dark"
             >
               + Add Product
             </Link>
@@ -156,65 +148,60 @@ export default function AdminProducts() {
             placeholder="Search products..."
             value={search}
             onChange={(e) => {
-              setSearch(e.target.value)
-              setPage(1)
+              setSearch(e.target.value);
+              setPage(1);
             }}
-            className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary md:w-96"
           />
         </div>
 
         {/* Products Table */}
         {error ? (
-          <div className="text-center py-12 text-red-500">
-            Failed to load products
-          </div>
+          <div className="py-12 text-center text-red-500">Failed to load products</div>
         ) : !data ? (
-          <div className="text-center py-12">Loading...</div>
+          <div className="py-12 text-center">Loading...</div>
         ) : data.data.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="py-12 text-center text-gray-500">
             <p className="mb-4">No products found</p>
             {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="text-primary hover:underline"
-              >
+              <button onClick={() => setSearch('')} className="text-primary hover:underline">
                 Clear search
               </button>
             )}
           </div>
         ) : (
           <>
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="border-b bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                         Product
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                         Category
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                         Price
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                         Inventory
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y divide-gray-200 bg-white">
                     {data.data.map((product) => (
                       <tr key={product.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="whitespace-nowrap px-6 py-4">
                           <div className="flex items-center">
-                            <div className="relative w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 mr-3">
+                            <div className="relative mr-3 h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
                               <Image
                                 src={product.images[0] || '/placeholder-product.png'}
                                 alt={product.name}
@@ -223,42 +210,36 @@ export default function AdminProducts() {
                               />
                             </div>
                             <div>
-                              <div className="font-medium text-gray-900">
-                                {product.name}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {product.slug}
-                              </div>
+                              <div className="font-medium text-gray-900">{product.name}</div>
+                              <div className="text-sm text-gray-500">{product.slug}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-gray-700">
-                            {product.category.name}
-                          </span>
+                        <td className="whitespace-nowrap px-6 py-4">
+                          <span className="text-sm text-gray-700">{product.category.name}</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="whitespace-nowrap px-6 py-4">
                           <span className="text-sm font-medium text-gray-900">
                             {product.price.toLocaleString('vi-VN')} ₫
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="whitespace-nowrap px-6 py-4">
                           <span
                             className={`text-sm font-medium ${
                               product.inventory === 0
                                 ? 'text-red-600'
                                 : product.inventory < 10
-                                ? 'text-orange-600'
-                                : 'text-gray-900'
+                                  ? 'text-orange-600'
+                                  : 'text-gray-900'
                             }`}
                           >
                             {product.inventory}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="whitespace-nowrap px-6 py-4">
                           <button
                             onClick={() => handleTogglePublish(product)}
-                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
                               product.published
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-gray-100 text-gray-800'
@@ -267,7 +248,7 @@ export default function AdminProducts() {
                             {product.published ? 'Published' : 'Draft'}
                           </button>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                           <div className="flex justify-end gap-2">
                             <Link
                               href={`/admin/products/${product.id}/edit`}
@@ -297,17 +278,17 @@ export default function AdminProducts() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Previous
                 </button>
-                <span className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                <span className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-2">
                   Page {page} of {data.totalPages}
                 </span>
                 <button
                   onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
                   disabled={page === data.totalPages}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </button>
@@ -317,5 +298,5 @@ export default function AdminProducts() {
         )}
       </div>
     </>
-  )
+  );
 }

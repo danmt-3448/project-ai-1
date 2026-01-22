@@ -7,8 +7,8 @@
 **Cause**: Node.js v16.20.0 không tương thích với Vitest 1.6.1 và Vite 5.4.21
 
 **Requirement**: 
-- Vitest yêu cầu Node.js >= 18
-- Next.js 14 yêu cầu Node.js >= 18.17.0
+- Vitest yêu cầu Node.js >= 20
+- Next.js 14 yêu cầu Node.js >= 20 (use Node 20+ for compatibility)
 
 ---
 
@@ -25,17 +25,17 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 # Reload terminal
 source ~/.zshrc
 
-# Install Node.js 18
-nvm install 18
+# Install Node.js 20
+nvm install 20
 
-# Use Node.js 18
-nvm use 18
+# Use Node.js 20
+nvm use 20
 
 # Set default
-nvm alias default 18
+nvm alias default 20
 
 # Verify
-node -v  # should show v18.x.x
+node -v  # should show v20.x.x
 ```
 
 **Sau khi upgrade**, chạy lại:
@@ -43,7 +43,6 @@ node -v  # should show v18.x.x
 ```bash
 cd apps/frontend
 rm -rf node_modules package-lock.json
-npm install
 npm run test
 ```
 
@@ -70,7 +69,6 @@ Nếu không thể upgrade Node.js, downgrade dependencies:
 ```bash
 cd apps/frontend
 rm -rf node_modules package-lock.json
-npm install
 npm run test
 ```
 
@@ -78,12 +76,12 @@ npm run test
 
 ### Option 3: Use Docker (For E2E)
 
-Run tests trong Docker container với Node.js 18+:
+Run tests trong Docker container with Node.js 20+:
 
 **Create `Dockerfile.test`**:
 
 ```dockerfile
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -100,7 +98,6 @@ CMD ["npm", "run", "test"]
 **Run tests**:
 
 ```bash
-docker build -f Dockerfile.test -t storefront-test .
 docker run storefront-test
 ```
 
@@ -108,10 +105,10 @@ docker run storefront-test
 
 ## 🎯 Quick Fix (Recommended)
 
-**1. Upgrade to Node.js 18+**:
+**1. Upgrade to Node.js 20+**:
 
 ```bash
-nvm install 18 && nvm use 18
+nvm install 20 && nvm use 20
 ```
 
 **2. Reinstall dependencies**:
@@ -125,7 +122,6 @@ npm install
 **3. Run tests**:
 
 ```bash
-npm run test
 npm run test:ui
 ```
 
@@ -137,7 +133,7 @@ After fixing Node.js version:
 
 ```bash
 # Check Node version
-node -v  # Should be >= 18.0.0
+node -v  # Should be >= 20.0.0
 
 # Check npm version
 npm -v   # Should be >= 8.0.0
@@ -146,7 +142,6 @@ npm -v   # Should be >= 8.0.0
 cd apps/frontend
 npx vitest --version
 
-# Run tests
 npm run test
 ```
 
@@ -182,7 +177,6 @@ npm run test
 
 Test Files  3 passed (3)
      Tests  17 passed (17)
-  Start at  10:30:00
   Duration  450ms
 ```
 
@@ -218,7 +212,6 @@ global.fetch = vi.fn()
 ### Issue 4: Playwright errors
 
 **Solution**: Install browsers
-```bash
 npx playwright install
 ```
 
@@ -226,16 +219,15 @@ npx playwright install
 
 ## 📚 Next Steps After Fixing
 
-1. ✅ Upgrade Node.js to v18+
+1. ✅ Upgrade Node.js to v20+
 2. ✅ Run unit tests: `npm run test`
 3. ✅ Run E2E tests: `npm run test:e2e`
-4. ✅ Setup database: `npx prisma migrate dev`
 5. ✅ Seed data: `npm run seed`
 6. ✅ Start dev servers for E2E testing
 
 ---
 
 **Current Node Version**: v16.20.0 ❌  
-**Required Node Version**: >= v18.0.0 ✅
+**Required Node Version**: >= v20.0.0 ✅
 
 **Action Required**: Upgrade Node.js using nvm hoặc direct installer

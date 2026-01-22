@@ -1,24 +1,24 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface CartItem {
-  productId: number
-  name: string
-  slug: string
-  price: number
-  quantity: number
-  image?: string
-  inventory: number
+  productId: number;
+  name: string;
+  slug: string;
+  price: number;
+  quantity: number;
+  image?: string;
+  inventory: number;
 }
 
 interface CartStore {
-  items: CartItem[]
-  addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void
-  removeItem: (productId: number) => void
-  updateQuantity: (productId: number, quantity: number) => void
-  clearCart: () => void
-  getTotalItems: () => number
-  getSubtotal: () => number
+  items: CartItem[];
+  addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void;
+  removeItem: (productId: number) => void;
+  updateQuantity: (productId: number, quantity: number) => void;
+  clearCart: () => void;
+  getTotalItems: () => number;
+  getSubtotal: () => number;
 }
 
 export const useCartStore = create<CartStore>()(
@@ -28,29 +28,29 @@ export const useCartStore = create<CartStore>()(
 
       addItem: (item, quantity = 1) => {
         set((state) => {
-          const existingItem = state.items.find((i) => i.productId === item.productId)
+          const existingItem = state.items.find((i) => i.productId === item.productId);
 
           if (existingItem) {
             // Update quantity if item already exists
-            const newQuantity = Math.min(existingItem.quantity + quantity, item.inventory)
+            const newQuantity = Math.min(existingItem.quantity + quantity, item.inventory);
             return {
               items: state.items.map((i) =>
                 i.productId === item.productId ? { ...i, quantity: newQuantity } : i
               ),
-            }
+            };
           } else {
             // Add new item
             return {
               items: [...state.items, { ...item, quantity: Math.min(quantity, item.inventory) }],
-            }
+            };
           }
-        })
+        });
       },
 
       removeItem: (productId) => {
         set((state) => ({
           items: state.items.filter((item) => item.productId !== productId),
-        }))
+        }));
       },
 
       updateQuantity: (productId, quantity) => {
@@ -58,7 +58,7 @@ export const useCartStore = create<CartStore>()(
           if (quantity <= 0) {
             return {
               items: state.items.filter((item) => item.productId !== productId),
-            }
+            };
           }
 
           return {
@@ -67,24 +67,24 @@ export const useCartStore = create<CartStore>()(
                 ? { ...item, quantity: Math.min(quantity, item.inventory) }
                 : item
             ),
-          }
-        })
+          };
+        });
       },
 
       clearCart: () => {
-        set({ items: [] })
+        set({ items: [] });
       },
 
       getTotalItems: () => {
-        return get().items.reduce((total, item) => total + item.quantity, 0)
+        return get().items.reduce((total, item) => total + item.quantity, 0);
       },
 
       getSubtotal: () => {
-        return get().items.reduce((total, item) => total + item.price * item.quantity, 0)
+        return get().items.reduce((total, item) => total + item.price * item.quantity, 0);
       },
     }),
     {
       name: 'cart-storage',
     }
   )
-)
+);

@@ -312,6 +312,31 @@ Repository layout (monorepo)
 └─ docker-compose.yml
 ```
 
+## Current Implementation (workspace snapshot)
+
+Note: summary of what is already implemented in this repository (helps keep the spec aligned with code).
+
+- Backend implemented endpoints:
+  - `GET /api/categories` — returns [{ id, name, slug }] (see [apps/backend/pages/api/categories.ts](apps/backend/pages/api/categories.ts#L1)).
+  - `GET /api/products` — supports `?category=&search=&page=&limit=`; returns `{ data, total, page, limit, totalPages }` and only published products (see [apps/backend/pages/api/products/index.ts](apps/backend/pages/api/products/index.ts#L1)).
+  - `GET /api/products/:slug` — returns product detail including `category` and parsed `images` array (see [apps/backend/pages/api/products/[slug].ts](apps/backend/pages/api/products/[slug].ts#L1)).
+  - `POST /api/checkout` — transactional checkout validating `buyerName`, `buyerEmail`, `address`, `items[]`; decrements inventory and creates `Order`/`OrderItem`; supports `simulateFail` boolean for testing (see [apps/backend/pages/api/checkout.ts](apps/backend/pages/api/checkout.ts#L1)).
+  - `POST /api/admin/login` — admin auth returning JWT token and admin info (see [apps/backend/pages/api/admin/login.ts](apps/backend/pages/api/admin/login.ts#L1)).
+
+- Backend implementation notes:
+  - `lib/prisma.ts` exports a Prisma client singleton (see [apps/backend/lib/prisma.ts](apps/backend/lib/prisma.ts#L1)).
+  - CORS helper `withCors` wraps API handlers and allows OPTIONS handling (see [apps/backend/lib/cors.ts](apps/backend/lib/cors.ts#L1)).
+  - Products' `images` field is stored as a JSON string in the DB and is parsed to an array before returning to clients.
+
+- Frontend implemented pages/components:
+  - Home: `/` — uses `api.getCategories()` and `api.getProducts()` (see [apps/frontend/pages/index.tsx](apps/frontend/pages/index.tsx#L1)).
+  - Product detail: `/products/[slug]` — fetches `/api/products/:slug` and supports images, quantity selector, add-to-cart (see [apps/frontend/pages/products/[slug].tsx](apps/frontend/pages/products/[slug].tsx#L1)).
+  - Cart: `/cart` — uses `store/cartStore.ts` (Zustand) with localStorage persistence (see [apps/frontend/store/cartStore.ts](apps/frontend/store/cartStore.ts#L1) and [apps/frontend/pages/cart.tsx](apps/frontend/pages/cart.tsx#L1)).
+  - Checkout page exists at `/checkout` (see [apps/frontend/pages/checkout.tsx](apps/frontend/pages/checkout.tsx#L1)).
+
+These notes are intended to keep the spec synchronized with the codebase; use them when updating tasks or writing new tests.
+
+
 package.json scripts (examples)
 
 Root `package.json` (workspaces)

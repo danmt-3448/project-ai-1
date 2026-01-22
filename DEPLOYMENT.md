@@ -9,9 +9,9 @@ This repository uses Next.js + TypeScript for both frontend (FE) and backend (BE
 
 Adjust paths below to match your repo structure.
 
-## Prerequisites
+- ## Prerequisites
 
-- Node.js 18+ (or the version in `engines` in package.json)
+- Node.js 20+ (or the version in `engines` in package.json). Use `nvm use` to pick Node 20 (repo includes `.nvmrc`).
 - npm 8+ or Yarn 1/2+/pnpm
 - Docker (optional, for container workflows)
 - Vercel account and CLI (for deployments)
@@ -105,18 +105,18 @@ Use Docker to run apps in containers for local testing or production deployment 
 Create `Dockerfile.frontend` in the repo root:
 
 ```dockerfile
-FROM node:18-alpine AS deps
+FROM node:20-alpine AS deps
 WORKDIR /app
 COPY apps/frontend/package*.json ./
 RUN npm ci
 
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY apps/frontend .
 RUN npm run build
 
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/.next .next
@@ -132,18 +132,18 @@ CMD ["npm", "start"]
 Create `Dockerfile.backend` in the repo root:
 
 ```dockerfile
-FROM node:18-alpine AS deps
+FROM node:20-alpine AS deps
 WORKDIR /app
 COPY apps/backend/package*.json ./
 RUN npm ci
 
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY apps/backend .
 RUN npm run build
 
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/.next .next
@@ -215,7 +215,7 @@ Provide a `.github/workflows/ci.yml` to run these checks on PRs and pushes.
 ## Troubleshooting
 
 - If builds fail on Vercel, check the `Build & Development Settings` and set the correct `Install` and `Build` commands per project.
-- For image size issues, use `node:18-alpine` and prune dev dependencies in the Dockerfile.
+- For image size issues, use `node:20-alpine` and prune dev dependencies in the Dockerfile.
 
 ---
 

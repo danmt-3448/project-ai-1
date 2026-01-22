@@ -36,32 +36,55 @@ Có thể ứng dụng cho cả project monorepo hoặc repo riêng.
 ## Feature: Cart & Checkout
 
 ### Frontend Tasks
-- [ ] Create `CartPage` component
-- [ ] Implement cart state (Zustand/context/localStorage)
-- [ ] UI for add/remove/update cart item
-- [ ] Checkout page: Form validate (Yup/Zod)
-- [ ] Show order confirmation after checkout
+- [x] Create `CartPage` component (apps/frontend/pages/cart.tsx)
+- [x] Implement cart state with Zustand (apps/frontend/store/cartStore.ts)
+- [x] Persist cart to localStorage
+- [x] UI for add/remove/update cart item
+- [x] Checkout page with Zod validation (apps/frontend/pages/checkout.tsx)
+- [x] Show order confirmation (apps/frontend/pages/order/[id].tsx)
+- [ ] Add loading skeletons
+- [ ] Add error boundaries
 
 ### Backend/API Tasks
-- [ ] POST /api/checkout endpoint
-- [ ] Validate stock, transactional checkout logic
-- [ ] Create order entries in DB
+- [x] POST /api/checkout endpoint (apps/backend/pages/api/checkout.ts)
+- [x] Zod validation schema for checkout
+- [x] Prisma transaction for stock check and inventory decrement
+- [x] Create Order and OrderItem entries
+- [x] GET /api/orders/:id endpoint (apps/backend/pages/api/orders/[id].ts)
+- [x] Enrich order items with product images/slug
+- [ ] Add rate limiting
+- [ ] Add order status transitions
 
 ### Database Tasks
-- [ ] Update schema.prisma: Order & OrderItem
-- [ ] Migration for order tables
-- [ ] Seed test order data
+- [x] Prisma schema complete (prisma/schema.prisma)
+- [x] Models: Category, Product, Order, OrderItem, AdminUser
+- [x] Migrations created
+- [x] Seed script (prisma/seed.ts)
+- [ ] Add indexes for performance
+- [ ] Add soft delete for products
 
 ### Testing
-- [ ] Unit test for cart logic (FE)
-- [ ] Integration test checkout API (BE)
-- [ ] E2E test: add-to-cart → checkout flow
+- [ ] Unit tests: cart store (apps/frontend/tests/cart.test.ts with Vitest)
+- [ ] Unit tests: ProductCard component (apps/frontend/tests/components/ProductCard.test.tsx)
+- [ ] Integration tests: checkout API (apps/backend/tests/api/checkout.test.ts with Vitest)
+- [ ] Integration tests: auth middleware (apps/backend/tests/api/auth.test.ts)
+- [ ] E2E tests: user flow with Playwright (e2e/user-flow.spec.ts)
+- [ ] E2E tests: admin flow with Playwright (e2e/admin-flow.spec.ts)
+- [ ] Test concurrent checkout (race conditions)
 
 ### Documentation
 - [ ] Update API docs for checkout
 - [ ] Write usage example in README
 
-**Dependencies:** Checkout BE cần product, inventory model; FE checkout chờ BE API hoàn thành.
+**Current Status:** 
+- Core checkout flow implemented ✅
+- Cart state management (Zustand) ✅
+- Transaction-based inventory management ✅
+
+**Remaining Dependencies:** 
+- Admin UI completion requires protected route HOC
+- Testing requires test database setup
+- E2E tests require both FE/BE running
 ```
 
 ---
