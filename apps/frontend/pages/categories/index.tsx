@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { api, Category } from '@/lib/api';
 
 export default function Categories() {
-  const { data: categories, error } = useSWR<Category[]>('/api/categories', () =>
-    api.getCategories()
+  const { data: categories, error } = useSWR<Category[]>(
+    '/api/categories',
+    (() => api.getCategories()) as any
   );
 
   if (error) {

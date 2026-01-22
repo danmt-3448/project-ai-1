@@ -70,8 +70,10 @@ class ApiClient {
     return this.request<Category[]>('/categories');
   }
 
-  async getCategoryProducts(slug: string): Promise<Product[]> {
-    return this.request<Product[]>(`/categories/${slug}/products`);
+  async getCategoryProducts(slug: string): Promise<{ category: Category; products: Product[] }> {
+    return this.request<{ category: Category; products: Product[] }>(
+      `/categories/${slug}/products`
+    );
   }
 
   // Products

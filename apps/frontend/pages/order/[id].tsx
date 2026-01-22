@@ -3,6 +3,7 @@ import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { as } from 'vitest/dist/reporters-w_64AS5f.js';
 
 interface Order {
   id: number;
@@ -29,9 +30,8 @@ export default function OrderDetail() {
   const router = useRouter();
   const { id } = router.query;
 
-  const { data: order, error } = useSWR<Order>(id ? `/api/orders/${id}` : null, () =>
-    api.getOrder(parseInt(id as string, 10))
-  );
+  const { data: order, error } = useSWR<Order, Error>(id ? `/api/orders/${id}` : null, (() =>
+    api.getOrder(id?.toString() || '')) as any);
 
   if (error) {
     return (

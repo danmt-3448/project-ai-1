@@ -2,42 +2,23 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
-import { api } from '@/lib/api';
+import { api, Category, Product } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
 
-interface Category {
-  id: number;
-  name: string;
-  slug: string;
-}
-
-interface Product {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  price: number;
-  inventory: number;
-  images: string[];
-  category: {
-    id: number;
-    name: string;
-    slug: string;
-  };
-}
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
 
   // Fetch categories
-  const { data: categories, error: categoriesError } = useSWR<Category[]>('/api/categories', () =>
-    api.getCategories()
+  const { data: categories, error: categoriesError } = useSWR<Category[], Error>(
+    '/api/categories',
+    () => api.getCategories()
   );
 
   // Fetch products
   const { data: productsData, error: productsError } = useSWR(
     ['/api/products', selectedCategory],
-    ([_, cat]) => api.getProducts({ category: cat, limit: 8 })
+    ([_, cat]: [string, string | undefined]) => api.getProducts({ category: cat, limit: 8 })
   );
 
   const isLoading = !categories || !productsData;

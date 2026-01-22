@@ -10,8 +10,9 @@ export default function CategoryProducts() {
   const router = useRouter();
   const { slug } = router.query;
 
-  const { data, error } = useSWR<Product[]>(slug ? `/api/categories/${slug}/products` : null, () =>
-    api.getCategoryProducts(slug as string)
+  const { data, error } = useSWR<{ category: import('@/lib/api').Category; products: import('@/lib/api').Product[] }>(
+    slug ? `/api/categories/${slug}/products` : null,
+    () => api.getCategoryProducts(slug as string)
   );
 
   const products = data?.products;

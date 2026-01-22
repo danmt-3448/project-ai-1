@@ -31,8 +31,9 @@ export default function ProductDetail() {
   const [selectedImage, setSelectedImage] = useState(0);
   const addItem = useCartStore((state) => state.addItem);
 
-  const { data: product, error } = useSWR<Product>(slug ? `/api/products/${slug}` : null, () =>
-    api.getProduct(slug as string)
+  const { data: product, error } = useSWR<Product>(
+    slug ? `/api/products/${slug}` : null,
+    (() => api.getProduct(slug as string)) as any
   );
 
   const handleAddToCart = () => {
