@@ -42,8 +42,9 @@ node -v  # should show v20.x.x
 
 ```bash
 cd apps/frontend
-rm -rf node_modules package-lock.json
-npm run test
+rm -rf node_modules yarn.lock
+yarn install
+yarn test
 ```
 
 ---
@@ -68,8 +69,9 @@ Nếu không thể upgrade Node.js, downgrade dependencies:
 
 ```bash
 cd apps/frontend
-rm -rf node_modules package-lock.json
-npm run test
+rm -rf node_modules yarn.lock
+yarn install
+yarn test
 ```
 
 ---
@@ -114,15 +116,15 @@ nvm install 20 && nvm use 20
 **2. Reinstall dependencies**:
 
 ```bash
-cd /Users/maithanhdan/Desktop/Sun/project_ai/project-ai-1/apps/frontend
-rm -rf node_modules package-lock.json
-npm install
+cd apps/frontend
+rm -rf node_modules yarn.lock
+yarn install
 ```
 
 **3. Run tests**:
 
 ```bash
-npm run test:ui
+yarn test:ui
 ```
 
 ---
@@ -135,14 +137,14 @@ After fixing Node.js version:
 # Check Node version
 node -v  # Should be >= 20.0.0
 
-# Check npm version
-npm -v   # Should be >= 8.0.0
+# Check Yarn version
+yarn -v  # Should be >= 1.22.19
 
 # Test vitest
 cd apps/frontend
-npx vitest --version
+yarn vitest --version
 
-npm run test
+yarn test
 ```
 
 ---
@@ -188,7 +190,7 @@ Test Files  3 passed (3)
 
 **Solution**: Install dependencies
 ```bash
-npm install
+yarn install
 ```
 
 ### Issue 2: `Cannot find module '@/...'`
@@ -220,10 +222,12 @@ npx playwright install
 ## 📚 Next Steps After Fixing
 
 1. ✅ Upgrade Node.js to v20+
-2. ✅ Run unit tests: `npm run test`
-3. ✅ Run E2E tests: `npm run test:e2e`
-5. ✅ Seed data: `npm run seed`
-6. ✅ Start dev servers for E2E testing
+2. ✅ Install dependencies: `yarn install`
+3. ✅ Run unit tests: `yarn test`
+4. ✅ Run E2E tests: `yarn test:e2e`
+5. ✅ Seed data: `yarn seed`
+6. ✅ Start dev servers: `yarn dev`
+7. ✅ Format code: `yarn format`
 
 ---
 

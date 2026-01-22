@@ -25,12 +25,16 @@ export default function Checkout() {
 
     try {
       const checkoutItems = items.map((item) => ({
-        productId: item.productId,
+        productId: String(item.productId), // Convert number to string for API
         quantity: item.quantity,
       }));
 
       const result = await api.checkout({
-        ...formData,
+        buyer: {
+          name: formData.buyerName,
+          email: formData.buyerEmail,
+          address: formData.address,
+        },
         items: checkoutItems,
       });
 

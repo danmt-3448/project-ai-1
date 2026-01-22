@@ -560,22 +560,81 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
 - **Dependencies:** BE-10
 - **Files:** `apps/backend/pages/api/admin/products/[id].ts`
 
-#### BE-15: API CRUD /api/admin/categories
-- **ID:** BE-15
+#### BE-16: API GET /api/admin/categories
+- **ID:** BE-16
+- **Estimate:** 3h
+- **Assignee:** Backend Dev
+- **Description:** Admin endpoint list all categories with product counts
+- **Acceptance Criteria:**
+  - [ ] File `pages/api/admin/categories/index.ts` (GET handler)
+  - [ ] Protected by `requireAdmin` middleware
+  - [ ] Return array: `[{ id, name, slug, _count: { products: number } }]`
+  - [ ] Use Prisma `include: { _count: { select: { products: true } } }`
+  - [ ] No pagination (MVP: return all categories)
+  - [ ] CORS applied automatically via middleware
+  - [ ] 401 if no valid token
+  - [ ] 500 with error message on failure
+- **Dependencies:** BE-10
+- **Files:** `apps/backend/pages/api/admin/categories/index.ts`
+
+#### BE-16a: API POST /api/admin/categories
+- **ID:** BE-16a
 - **Estimate:** 4h
 - **Assignee:** Backend Dev
-- **Description:** Admin endpoints cho categories
+- **Description:** Admin endpoint create new category with validation
 - **Acceptance Criteria:**
-  - [ ] GET /api/admin/categories (list all)
-  - [ ] POST /api/admin/categories (create)
-  - [ ] PUT /api/admin/categories/:id (update)
-  - [ ] DELETE /api/admin/categories/:id (delete, check no products)
-  - [ ] All protected by auth middleware
+  - [ ] File `pages/api/admin/categories/index.ts` (POST handler)
+  - [ ] Protected by `requireAdmin` middleware
+  - [ ] Zod validation schema: `{ name: string (min 1, max 100), slug: string (min 1, max 100, regex: /^[a-z0-9-]+$/) }`
+  - [ ] Check slug uniqueness with `prisma.category.findUnique({ where: { slug } })`
+  - [ ] Return 400 if slug already exists: `{ error: "Slug already exists" }`
+  - [ ] Return 400 if validation fails: `{ error: "Validation failed", details: ZodError }`
+  - [ ] Create category: `prisma.category.create({ data: { name, slug } })`
+  - [ ] Return 201 with created category: `{ id, name, slug }`
+  - [ ] Slug must be lowercase letters, numbers, hyphens only (no spaces, no uppercase)
 - **Dependencies:** BE-10
-- **Files:** `apps/backend/pages/api/admin/categories/*.ts`
+- **Files:** `apps/backend/pages/api/admin/categories/index.ts`
 
-#### BE-16: API GET /api/admin/orders
-- **ID:** BE-16
+#### BE-16b: API PUT /api/admin/categories/:id
+- **ID:** BE-16b
+- **Estimate:** 4h
+- **Assignee:** Backend Dev
+- **Description:** Admin endpoint update category (partial update)
+- **Acceptance Criteria:**
+  - [ ] File `pages/api/admin/categories/[id].ts` (PUT handler)
+  - [ ] Protected by `requireAdmin` middleware
+  - [ ] Zod validation: `{ name?: string (min 1, max 100), slug?: string (min 1, max 100, regex: /^[a-z0-9-]+$/) }`
+  - [ ] At least one field (name or slug) must be provided
+  - [ ] Return 400 if no fields provided: `{ error: "At least one field must be provided" }`
+  - [ ] If slug is being changed, check uniqueness excluding current category
+  - [ ] Query: `prisma.category.findFirst({ where: { slug: newSlug, NOT: { id } } })`
+  - [ ] Return 400 if new slug conflicts: `{ error: "Slug already exists" }`
+  - [ ] Update category: `prisma.category.update({ where: { id }, data: { name?, slug? } })`
+  - [ ] Return 200 with updated category: `{ id, name, slug }`
+  - [ ] Return 404 if category not found
+- **Dependencies:** BE-10
+- **Files:** `apps/backend/pages/api/admin/categories/[id].ts`
+
+#### BE-16c: API DELETE /api/admin/categories/:id
+- **ID:** BE-16c
+- **Estimate:** 3h
+- **Assignee:** Backend Dev
+- **Description:** Admin endpoint delete category (with product count protection)
+- **Acceptance Criteria:**
+  - [ ] File `pages/api/admin/categories/[id].ts` (DELETE handler)
+  - [ ] Protected by `requireAdmin` middleware
+  - [ ] Fetch category with product count: `prisma.category.findUnique({ where: { id }, include: { _count: { select: { products: true } } } })`
+  - [ ] Return 404 if category not found
+  - [ ] Check if `category._count.products > 0`
+  - [ ] Return 400 if products exist: `{ error: "Cannot delete category with products", details: { productCount: number } }`
+  - [ ] Delete category only if no products: `prisma.category.delete({ where: { id } })`
+  - [ ] Return 200 with message: `{ message: "Category deleted" }`
+  - [ ] Note: Prevents accidental data loss even though schema has onDelete: Cascade
+- **Dependencies:** BE-10
+- **Files:** `apps/backend/pages/api/admin/categories/[id].ts`
+
+#### BE-17: API GET /api/admin/orders
+- **ID:** BE-17
 - **Estimate:** 3h
 - **Assignee:** Backend Dev
 - **Description:** Admin endpoint list orders
@@ -670,18 +729,127 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
 
 #### FE-21: Admin Categories management (/admin/categories)
 - **ID:** FE-21
-- **Estimate:** 5h
+- **Estimate:** 10h (total for all subtasks)
 - **Assignee:** Frontend Dev
-- **Description:** Tạo trang quản lý categories
+- **Description:** Tạo trang quản lý categories với inline create/edit, delete protection
+- **Acceptance Criteria:** See subtasks FE-21a through FE-21g below
+- **Dependencies:** FE-17 (auth context), BE-16, BE-16a, BE-16b, BE-16c
+- **Files:** `apps/frontend/pages/admin/categories/index.tsx`
+
+#### FE-21a: Categories table UI
+- **ID:** FE-21a
+- **Estimate:** 2h
+- **Assignee:** Frontend Dev
+- **Description:** Tạo table hiển thị categories với product count
 - **Acceptance Criteria:**
-  - [ ] File `pages/admin/categories.tsx`
-  - [ ] Protected route
-  - [ ] List categories
-  - [ ] Inline create form
-  - [ ] Inline edit form
-  - [ ] Delete button (confirm)
-- **Dependencies:** FE-17, BE-15
-- **Files:** `apps/frontend/pages/admin/categories.tsx`
+  - [ ] Table columns: Name, Slug, Product Count, Actions (Edit, Delete buttons)
+  - [ ] Fetch categories từ `GET /api/admin/categories` using SWR
+  - [ ] Display product count per category (from `_count.products`)
+  - [ ] Empty state message when no categories
+  - [ ] Loading skeleton while fetching
+  - [ ] Error state display
+  - [ ] Responsive table (scrollable on mobile)
+- **Dependencies:** FE-17, BE-16
+- **Files:** `apps/frontend/pages/admin/categories/index.tsx`
+
+#### FE-21b: Inline create category form
+- **ID:** FE-21b
+- **Estimate:** 2h
+- **Assignee:** Frontend Dev
+- **Description:** Form tạo category mới ở top của table
+- **Acceptance Criteria:**
+  - [ ] Form always visible at top with inputs: Name (text), Slug (text)
+  - [ ] "Add Category" submit button
+  - [ ] POST to `/api/admin/categories` with JWT token in Authorization header
+  - [ ] Client-side validation: name required, slug required, slug format (lowercase, hyphens only)
+  - [ ] Show validation errors inline
+  - [ ] Show API errors (duplicate slug, validation failed)
+  - [ ] Clear form after successful creation
+  - [ ] SWR `mutate()` to refresh list after creation
+  - [ ] Loading state on submit button
+- **Dependencies:** FE-21a, BE-16a
+- **Files:** `apps/frontend/pages/admin/categories/index.tsx`
+
+#### FE-21c: Inline edit mode per row
+- **ID:** FE-21c
+- **Estimate:** 2h
+- **Assignee:** Frontend Dev
+- **Description:** Toggle edit mode cho từng category row
+- **Acceptance Criteria:**
+  - [ ] "Edit" button on each row
+  - [ ] Click Edit → row switches to edit mode (inputs replace text)
+  - [ ] Edit mode shows: Name input (pre-filled), Slug input (pre-filled)
+  - [ ] "Save" and "Cancel" buttons in edit mode
+  - [ ] Cancel → revert to display mode without changes
+  - [ ] Save → PUT to `/api/admin/categories/:id` with updated fields
+  - [ ] Only one row can be in edit mode at a time
+  - [ ] Validation same as create form
+  - [ ] Show errors (duplicate slug, validation)
+  - [ ] SWR `mutate()` after successful update
+- **Dependencies:** FE-21a, BE-16b
+- **Files:** `apps/frontend/pages/admin/categories/index.tsx`
+
+#### FE-21d: Delete category button with confirmation
+- **ID:** FE-21d
+- **Estimate:** 1.5h
+- **Assignee:** Frontend Dev
+- **Description:** Delete button với confirmation dialog
+- **Acceptance Criteria:**
+  - [ ] "Delete" button on each row (red/warning color)
+  - [ ] Click Delete → show confirmation dialog (browser `confirm()` or custom modal)
+  - [ ] Confirmation message: "Delete category '{name}'?"
+  - [ ] If confirmed → DELETE to `/api/admin/categories/:id`
+  - [ ] Handle success → SWR `mutate()` to refresh list
+  - [ ] Handle error → display error message
+- **Dependencies:** FE-21a, BE-16c
+- **Files:** `apps/frontend/pages/admin/categories/index.tsx`
+
+#### FE-21e: Prevent delete when category has products
+- **ID:** FE-21e
+- **Estimate:** 1h
+- **Assignee:** Frontend Dev
+- **Description:** Show alert khi delete category có products
+- **Acceptance Criteria:**
+  - [ ] Check product count before allowing delete
+  - [ ] If `_count.products > 0`, show alert: "Cannot delete '{name}' - it has {count} products"
+  - [ ] Do not call DELETE API if products exist
+  - [ ] If API returns 400 error (products exist), display error message from API
+  - [ ] Error message includes product count from API response
+  - [ ] User-friendly error display (toast or alert)
+- **Dependencies:** FE-21d, BE-16c
+- **Files:** `apps/frontend/pages/admin/categories/index.tsx`
+
+#### FE-21f: Client-side slug format validation
+- **ID:** FE-21f
+- **Estimate:** 1h
+- **Assignee:** Frontend Dev
+- **Description:** Real-time slug validation on create/edit forms
+- **Acceptance Criteria:**
+  - [ ] Regex validation: `/^[a-z0-9-]+$/` (lowercase, numbers, hyphens only)
+  - [ ] Show error message if validation fails: "Slug must be lowercase letters, numbers, and hyphens only"
+  - [ ] Validation triggers on blur or onChange (debounced)
+  - [ ] Disable submit if slug invalid
+  - [ ] Red border on invalid input
+  - [ ] Optional: auto-convert uppercase to lowercase on input
+  - [ ] Optional: replace spaces with hyphens automatically
+- **Dependencies:** FE-21b, FE-21c
+- **Files:** `apps/frontend/pages/admin/categories/index.tsx`
+
+#### FE-21g: SWR integration with optimistic updates
+- **ID:** FE-21g
+- **Estimate:** 1.5h
+- **Assignee:** Frontend Dev
+- **Description:** Setup SWR với optimistic updates for better UX
+- **Acceptance Criteria:**
+  - [ ] Use SWR `mutate()` for cache revalidation after create/update/delete
+  - [ ] Optional: Optimistic updates - update UI immediately before API call
+  - [ ] Rollback optimistic update if API call fails
+  - [ ] Show loading states during mutations
+  - [ ] Revalidate on focus (SWR default behavior)
+  - [ ] Error retry strategy (SWR config)
+  - [ ] Smooth transitions between states
+- **Dependencies:** FE-21a, FE-21b, FE-21c, FE-21d
+- **Files:** `apps/frontend/pages/admin/categories/index.tsx`
 
 #### FE-22: Admin Orders list (/admin/orders)
 - **ID:** FE-22
@@ -761,7 +929,100 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
 - **Dependencies:** BE-10
 - **Files:** `apps/backend/__tests__/middleware/auth.test.ts`
 
-#### TEST-04: Frontend unit tests - ProductCard
+#### TEST-04: Backend unit tests - admin auth
+- **ID:** TEST-03
+- **Estimate:** 3h
+- **Assignee:** Backend Dev
+- **Description:** Viết tests cho auth middleware
+- **Acceptance Criteria:**
+  - [ ] Test file `__tests__/middleware/auth.test.ts`
+  - [ ] Test valid token → request proceeds
+  - [ ] Test invalid token → 401
+  - [ ] Test expired token → 401
+  - [ ] Test missing token → 401
+- **Dependencies:** BE-10
+- **Files:** `apps/backend/__tests__/middleware/auth.test.ts`
+
+#### TEST-04a: Backend unit tests - GET /api/admin/categories
+- **ID:** TEST-04a
+- **Estimate:** 2h
+- **Assignee:** Backend Dev
+- **Description:** Test category list endpoint with product counts
+- **Acceptance Criteria:**
+  - [ ] Test file `__tests__/api/admin/categories.test.ts`
+  - [ ] Test returns all categories with product counts
+  - [ ] Test `_count.products` is correct number
+  - [ ] Test empty categories (product count = 0)
+  - [ ] Test returns 401 without valid token
+  - [ ] Use test database with seeded data
+- **Dependencies:** BE-16
+- **Files:** `apps/backend/__tests__/api/admin/categories.test.ts`
+
+#### TEST-04b: Backend unit tests - POST /api/admin/categories
+- **ID:** TEST-04b
+- **Estimate:** 3h
+- **Assignee:** Backend Dev
+- **Description:** Test category creation with validation
+- **Acceptance Criteria:**
+  - [ ] Test successful creation returns 201 with category
+  - [ ] Test validation: name required (400 error)
+  - [ ] Test validation: slug required (400 error)
+  - [ ] Test validation: slug format (rejects uppercase, spaces, special chars)
+  - [ ] Test duplicate slug returns 400 "Slug already exists"
+  - [ ] Test created category appears in GET list
+  - [ ] Test returns 401 without valid token
+- **Dependencies:** BE-16a
+- **Files:** `apps/backend/__tests__/api/admin/categories.test.ts`
+
+#### TEST-04c: Backend unit tests - PUT /api/admin/categories/:id
+- **ID:** TEST-04c
+- **Estimate:** 3h
+- **Assignee:** Backend Dev
+- **Description:** Test category update endpoint
+- **Acceptance Criteria:**
+  - [ ] Test successful update returns 200 with updated category
+  - [ ] Test partial update (only name or only slug)
+  - [ ] Test returns 400 if no fields provided
+  - [ ] Test slug uniqueness check (prevents duplicate slugs)
+  - [ ] Test can update to same slug (no conflict with self)
+  - [ ] Test returns 404 for non-existent category
+  - [ ] Test validation same as POST endpoint
+  - [ ] Test returns 401 without valid token
+- **Dependencies:** BE-16b
+- **Files:** `apps/backend/__tests__/api/admin/categories.test.ts`
+
+#### TEST-04d: Backend unit tests - DELETE /api/admin/categories/:id
+- **ID:** TEST-04d
+- **Estimate:** 3h
+- **Assignee:** Backend Dev
+- **Description:** Test category deletion with product protection
+- **Acceptance Criteria:**
+  - [ ] Test successful deletion when no products (returns 200)
+  - [ ] Test prevents deletion when products exist (returns 400)
+  - [ ] Test error includes product count in details
+  - [ ] Test returns 404 for non-existent category
+  - [ ] Test category actually removed from database after successful delete
+  - [ ] Test returns 401 without valid token
+  - [ ] Test with test database (seed categories with and without products)
+- **Dependencies:** BE-16c
+- **Files:** `apps/backend/__tests__/api/admin/categories.test.ts`
+
+#### TEST-04e: Backend unit tests - Category endpoints auth
+- **ID:** TEST-04e
+- **Estimate:** 1h
+- **Assignee:** Backend Dev
+- **Description:** Test all category endpoints require authentication
+- **Acceptance Criteria:**
+  - [ ] Test GET /api/admin/categories returns 401 without token
+  - [ ] Test POST /api/admin/categories returns 401 without token
+  - [ ] Test PUT /api/admin/categories/:id returns 401 without token
+  - [ ] Test DELETE /api/admin/categories/:id returns 401 without token
+  - [ ] Test invalid token format returns 401
+  - [ ] Test expired token returns 401
+- **Dependencies:** BE-16, BE-16a, BE-16b, BE-16c
+- **Files:** `apps/backend/__tests__/api/admin/categories.test.ts`
+
+#### TEST-05: Frontend unit tests - ProductCard
 - **ID:** TEST-04
 - **Estimate:** 2h
 - **Assignee:** Frontend Dev
@@ -789,7 +1050,42 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
 - **Dependencies:** FE-09
 - **Files:** `apps/frontend/__tests__/context/CartContext.test.tsx`
 
-#### TEST-06: Integration test - checkout E2E
+#### TEST-06: Frontend unit tests - Cart logic
+- **ID:** TEST-05
+- **Estimate:** 4h
+- **Assignee:** Frontend Dev
+- **Description:** Viết tests cho cart state management
+- **Acceptance Criteria:**
+  - [ ] Test file `__tests__/context/CartContext.test.tsx`
+  - [ ] Test addItem
+  - [ ] Test removeItem
+  - [ ] Test updateQuantity
+  - [ ] Test clearCart
+- **Dependencies:** FE-09
+- **Files:** `apps/frontend/__tests__/context/CartContext.test.tsx`
+
+#### TEST-06a: Frontend unit tests - Admin categories page
+- **ID:** TEST-06a
+- **Estimate:** 4h
+- **Assignee:** Frontend Dev
+- **Description:** Test admin categories management page
+- **Acceptance Criteria:**
+  - [ ] Test file `__tests__/pages/admin/categories.test.tsx`
+  - [ ] Test renders categories list with product counts
+  - [ ] Test create form submits correctly
+  - [ ] Test create form validation (name, slug format)
+  - [ ] Test edit mode toggles on button click
+  - [ ] Test save button updates category
+  - [ ] Test cancel button reverts changes
+  - [ ] Test delete shows confirmation dialog
+  - [ ] Test delete prevented when products exist (shows alert)
+  - [ ] Test delete succeeds when no products
+  - [ ] Test SWR revalidation after mutations
+  - [ ] Mock API calls with msw or jest.mock
+- **Dependencies:** FE-21 (all subtasks)
+- **Files:** `apps/frontend/__tests__/pages/admin/categories.test.tsx`
+
+#### TEST-07: Integration test - checkout E2E
 - **ID:** TEST-06
 - **Estimate:** 6h
 - **Assignee:** Backend Dev
@@ -815,6 +1111,42 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] Screenshots on fail
 - **Dependencies:** All FE/BE done
 - **Files:** `e2e/checkout.spec.ts`, `e2e/admin.spec.ts`
+
+#### TEST-07: E2E test - user flow (optional)
+- **ID:** TEST-07
+- **Estimate:** 8h
+- **Assignee:** QA/Frontend Dev
+- **Description:** E2E test với Playwright
+- **Acceptance Criteria:**
+  - [ ] Setup Playwright
+  - [ ] Test: browse → add to cart → checkout → order confirmation
+  - [ ] Test: admin login → create product → verify in public store
+  - [ ] Screenshots on fail
+- **Dependencies:** All FE/BE done
+- **Files:** `e2e/checkout.spec.ts`, `e2e/admin.spec.ts`
+
+#### TEST-08a: E2E test - admin category management flow
+- **ID:** TEST-08a
+- **Estimate:** 4h
+- **Assignee:** QA/Frontend Dev
+- **Description:** E2E test cho admin category CRUD flow với Playwright
+- **Acceptance Criteria:**
+  - [ ] Test file `e2e/admin-categories.spec.ts`
+  - [ ] Test login as admin → navigate to /admin/categories
+  - [ ] Test view categories list with product counts
+  - [ ] Test create new category with valid name and slug
+  - [ ] Test create fails with invalid slug (uppercase, spaces)
+  - [ ] Test create fails with duplicate slug (shows error)
+  - [ ] Test edit category name
+  - [ ] Test edit category slug
+  - [ ] Test edit fails with duplicate slug
+  - [ ] Test delete category with products shows error alert
+  - [ ] Test delete empty category succeeds
+  - [ ] Test verify deleted category not in list
+  - [ ] Test category changes reflect in product form dropdown (integration check)
+  - [ ] Use test database with known seed data
+- **Dependencies:** FE-21 (all subtasks), BE-16, BE-16a, BE-16b, BE-16c
+- **Files:** `e2e/admin-categories.spec.ts`
 
 #### TEST-08: Security audit
 - **ID:** TEST-08

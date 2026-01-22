@@ -95,7 +95,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Actions */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <Link href="/admin/products">
             <div className="group cursor-pointer rounded-lg border bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
               <div className="mb-4 flex items-center">
@@ -107,6 +107,22 @@ export default function AdminDashboard() {
                     Manage Products
                   </h3>
                   <p className="text-sm text-gray-600">Add, edit, or remove products</p>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/admin/categories">
+            <div className="group cursor-pointer rounded-lg border bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+              <div className="mb-4 flex items-center">
+                <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
+                  <span className="text-2xl">🏷️</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold transition-colors group-hover:text-primary">
+                    Manage Categories
+                  </h3>
+                  <p className="text-sm text-gray-600">Create and organize categories</p>
                 </div>
               </div>
             </div>

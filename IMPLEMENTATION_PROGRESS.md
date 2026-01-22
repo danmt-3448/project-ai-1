@@ -42,6 +42,8 @@
 
 ### Infrastructure & DevOps
 - ✅ Root package.json with workspace scripts
+- ✅ Yarn as package manager (v1.22.19) with .nvmrc for Node 20
+- ✅ Prettier configuration (both FE & BE) with format scripts
 - ✅ TypeScript strict configuration (both FE & BE)
 - ✅ Docker Compose setup (postgres service)
 - ✅ GitHub Actions CI workflow
@@ -135,6 +137,9 @@
 
 ### ✅ Technical Excellence
 - **Type Safety**: Full TypeScript coverage
+- **Package Manager**: Yarn with workspace support
+- **Code Formatting**: Prettier with Tailwind plugin (FE)
+- **Node Version**: Node 20 enforced via .nvmrc files
 - **State Management**: Zustand with persistence
 - **Data Fetching**: SWR for client-side caching
 - **Database**: Prisma with transactions
@@ -148,17 +153,21 @@
 ## 📝 Quick Start Commands
 
 ```bash
-# Install dependencies
-npm install
+# Install dependencies (uses Yarn)
+nvm use  # Switch to Node 20
+yarn install
 
 # Setup database
-npx prisma migrate dev --name init
-npm run db:seed
+yarn prisma:migrate
+yarn seed
 
 # Start development
-npm run dev
+yarn dev
 # Frontend: http://localhost:3000
 # Backend: http://localhost:3001/api
+
+# Format code
+yarn format
 
 # Admin login
 # Username: admin

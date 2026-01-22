@@ -30,14 +30,15 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
 
   // Fetch categories
-  const { data: categories, error: categoriesError } = useSWR<Category[]>('/api/categories', () =>
-    api.getCategories()
+  const { data: categories, error: categoriesError } = useSWR<Category[]>(
+    '/api/categories',
+    () => api.getCategories()
   );
 
-  // Fetch products
+  // Fetch products  
   const { data: productsData, error: productsError } = useSWR(
     ['/api/products', selectedCategory],
-    () => api.getProducts({ category: selectedCategory, limit: 8 })
+    ([_, cat]) => api.getProducts({ category: cat, limit: 8 })
   );
 
   const isLoading = !categories || !productsData;
@@ -155,7 +156,7 @@ export default function Home() {
           {productsData && productsData.data.length > 0 && (
             <div className="mt-8 text-center">
               <Link
-                href="/products"
+                href="/categories"
                 className="inline-block rounded-lg bg-primary px-6 py-3 font-semibold text-white transition-colors hover:bg-primary-dark"
               >
                 View All Products

@@ -1,24 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-
-interface Product {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  price: number;
-  inventory: number;
-  images: string[];
-  category?: {
-    id: number;
-    name: string;
-    slug: string;
-  };
-}
+import { Product as ApiProduct } from '@/lib/api';
 
 interface ProductCardProps {
-  product: Product;
+  product: ApiProduct;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {

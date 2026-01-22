@@ -137,8 +137,12 @@ Notes:
 - FE: Admin dashboard `/admin` (summary: total products, low stock, recent orders)
 - FE: Admin products list `/admin/products` (CRUD operations)
 - FE: Admin product edit page `/admin/products/[id]/edit`
+- **FE: Admin categories management `/admin/categories` (inline create/edit, delete with protection)**
 - Backend: GET/POST/PUT/DELETE /api/admin/products
-- Backend: GET/POST/PUT/DELETE /api/admin/categories
+- **Backend: GET /api/admin/categories (with product counts)**
+- **Backend: POST /api/admin/categories (with slug validation)**
+- **Backend: PUT /api/admin/categories/:id (prevent duplicate slugs)**
+- **Backend: DELETE /api/admin/categories/:id (prevent if products exist)**
 - Backend: GET /api/admin/orders
 
 **Acceptance Criteria:**
@@ -148,6 +152,12 @@ Notes:
 - ✅ Admin điều chỉnh inventory và giá
 - ✅ Admin xem danh sách orders
 - ✅ Protected routes: không có token → redirect login
+- ❌ **Admin xem tất cả categories với product count**
+- ❌ **Admin tạo mới category với name và slug validation**
+- ❌ **Admin sửa category (name/slug) với duplicate check**
+- ❌ **Admin xóa category (chỉ khi không có products)**
+- ❌ **System ngăn xóa category đang có products với error message rõ ràng**
+- ❌ **Slug format validation (lowercase, hyphens only, no spaces)**
 
 ---
 
@@ -234,13 +244,23 @@ Notes:
 - [ ] **BE-13:** API POST /api/admin/products
 - [ ] **BE-14:** API PUT /api/admin/products/:id
 - [ ] **BE-15:** API DELETE /api/admin/products/:id
-- [ ] **BE-16:** API GET/POST/PUT/DELETE /api/admin/categories
+- [ ] **BE-16:** API GET /api/admin/categories (with product count via Prisma _count)
+- [ ] **BE-16a:** API POST /api/admin/categories (Zod validation: name, slug format, uniqueness check)
+- [ ] **BE-16b:** API PUT /api/admin/categories/:id (partial update, prevent duplicate slugs)
+- [ ] **BE-16c:** API DELETE /api/admin/categories/:id (check product count, prevent if > 0)
 - [ ] **BE-17:** API GET /api/admin/orders
 - [ ] **FE-17:** Admin login page `/admin/login`
 - [ ] **FE-18:** Admin dashboard `/admin`
 - [ ] **FE-19:** Admin products list `/admin/products`
 - [ ] **FE-20:** Admin product create/edit form
-- [ ] **FE-21:** Admin categories management
+- [ ] **FE-21:** Admin categories management `/admin/categories`
+  - [ ] **FE-21a:** Table list với name, slug, product count, actions (edit, delete)
+  - [ ] **FE-21b:** Inline create form ở top (name + slug inputs)
+  - [ ] **FE-21c:** Inline edit mode cho từng category row
+  - [ ] **FE-21d:** Delete button với confirmation dialog
+  - [ ] **FE-21e:** Prevent delete nếu category có products (show alert với product count)
+  - [ ] **FE-21f:** Client-side slug format validation (lowercase, hyphens only)
+  - [ ] **FE-21g:** SWR integration với optimistic updates via mutate()
 - [ ] **FE-22:** Admin orders list
 - [ ] **FE-23:** Protected route HOC/middleware cho admin pages
 
@@ -253,10 +273,17 @@ Notes:
 - [ ] **TEST-02:** Unit test backend: checkout happy path
 - [ ] **TEST-03:** Unit test backend: checkout out-of-stock
 - [ ] **TEST-04:** Unit test backend: admin auth middleware
+- [ ] **TEST-04a:** Unit test backend: category API GET (returns product counts)
+- [ ] **TEST-04b:** Unit test backend: category API POST (validates slug format, checks duplicates)
+- [ ] **TEST-04c:** Unit test backend: category API PUT (prevents duplicate slug conflicts)
+- [ ] **TEST-04d:** Unit test backend: category API DELETE (prevents deletion when products exist)
+- [ ] **TEST-04e:** Unit test backend: category endpoints return 401 without token
 - [ ] **TEST-05:** Unit test frontend: ProductCard component
 - [ ] **TEST-06:** Unit test frontend: Cart logic
+- [ ] **TEST-06a:** Unit test frontend: Admin categories page (render, create, edit, delete flows)
 - [ ] **TEST-07:** Integration test: checkout E2E
 - [ ] **TEST-08:** E2E test (optional): browse → cart → checkout
+- [ ] **TEST-08a:** E2E test: admin category management flow (create → edit → delete protection → delete empty)
 - [ ] **TEST-09:** Lint & typecheck pass trên CI
 - [ ] **TEST-10:** Security audit (secrets, input validation)
 
@@ -339,7 +366,11 @@ Notes:
 ### Sprint 4 done khi:
 - [ ] Admin login và access admin panel
 - [ ] Admin publish/unpublish product → public store update
-- [ ] Admin CRUD products và categories
+- [ ] Admin CRUD products (create, edit, delete)
+- [ ] Admin CRUD categories (view with product counts, create with validation, edit, delete with protection)
+- [ ] System prevents category deletion when products exist
+- [ ] Slug format validation works (rejects uppercase, spaces)
+- [ ] Category changes reflect in product category dropdown
 
 ### Sprint 5 done khi:
 - [ ] Test coverage ≥70%

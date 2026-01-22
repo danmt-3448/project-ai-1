@@ -8,7 +8,7 @@ Hướng dẫn test tất cả API endpoints của Mini Storefront.
 
 ### Start Backend Server
 ```bash
-npm run dev:backend
+yarn dev:backend
 # Backend running at http://localhost:3001
 ```
 

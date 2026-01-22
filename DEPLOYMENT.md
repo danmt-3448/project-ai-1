@@ -12,7 +12,7 @@ Adjust paths below to match your repo structure.
 - ## Prerequisites
 
 - Node.js 20+ (or the version in `engines` in package.json). Use `nvm use` to pick Node 20 (repo includes `.nvmrc`).
-- npm 8+ or Yarn 1/2+/pnpm
+- Yarn 1.22.19+ (package manager, configured in `packageManager` field)
 - Docker (optional, for container workflows)
 - Vercel account and CLI (for deployments)
 
@@ -21,22 +21,23 @@ Adjust paths below to match your repo structure.
 1. Install dependencies at the repo root (monorepo) or inside each app:
 
 ```bash
-# At repo root (if using pnpm/workspaces)
-pnpm install
+# At repo root (using Yarn workspaces)
+yarn install
 
 # Or per-app
-cd apps/frontend && npm install
-cd apps/backend && npm install
+cd apps/frontend && yarn install
+cd apps/backend && yarn install
 ```
 
 2. Run both apps in development:
 
 ```bash
-# Start frontend
-cd apps/frontend && npm run dev
+# Start both (from root)
+yarn dev
 
-# Start backend
-cd apps/backend && npm run dev
+# Or separately:
+cd apps/frontend && yarn dev
+cd apps/backend && yarn dev
 ```
 
 3. Environment variables
@@ -53,14 +54,14 @@ Never commit secrets — use `.gitignore` to keep `.env*` out of git.
 
 ```bash
 # Build backend
-cd apps/backend && npm run build
+cd apps/backend && yarn build
 
 # Build frontend
-cd apps/frontend && npm run build
+cd apps/frontend && yarn build
 
 # Optionally run previews
-cd apps/frontend && npm start
-cd apps/backend && npm start
+cd apps/frontend && yarn start
+cd apps/backend && yarn start
 ```
 
 ## Deploy to Vercel
@@ -107,14 +108,14 @@ Create `Dockerfile.frontend` in the repo root:
 ```dockerfile
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY apps/frontend/package*.json ./
-RUN npm ci
+COPY apps/frontend/package.json apps/frontend/yarn.lock ./
+RUN yarn install --frozen-lockfile
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY apps/frontend .
-RUN npm run build
+RUN yarn build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -122,9 +123,9 @@ ENV NODE_ENV=production
 COPY --from=builder /app/.next .next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
-COPY apps/frontend/package*.json ./
+COPY apps/frontend/package.json ./
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["yarn", "start"]
 ```
 
 ### Dockerfile (backend)
@@ -134,23 +135,24 @@ Create `Dockerfile.backend` in the repo root:
 ```dockerfile
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY apps/backend/package*.json ./
-RUN npm ci
+COPY apps/backend/package.json apps/backend/yarn.lock ./
+RUN yarn install --frozen-lockfile
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY apps/backend .
-RUN npm run build
+RUN yarn prisma:generate
+RUN yarn build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/.next .next
 COPY --from=builder /app/node_modules ./node_modules
-COPY apps/backend/package*.json ./
+COPY apps/backend/package.json ./
 EXPOSE 3001
-CMD ["npm", "start"]
+CMD ["yarn", "start"]
 ```
 
 ### docker-compose.yml (dev)

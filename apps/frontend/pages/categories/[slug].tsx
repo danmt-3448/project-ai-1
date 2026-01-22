@@ -2,38 +2,24 @@ import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
-import { api } from '@/lib/api';
+import { api, Product } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
-
-interface CategoryProductsResponse {
-  category: {
-    id: number;
-    name: string;
-    slug: string;
-  };
-  products: Array<{
-    id: number;
-    name: string;
-    slug: string;
-    description: string;
-    price: number;
-    inventory: number;
-    images: string[];
-    category: {
-      id: number;
-      name: string;
-      slug: string;
-    };
-  }>;
-}
+import { useMemo } from 'react';
 
 export default function CategoryProducts() {
   const router = useRouter();
   const { slug } = router.query;
 
-  const { data, error } = useSWR<CategoryProductsResponse>(
-    slug ? `/api/categories/${slug}/products` : null,
-    () => api.getCategoryProducts(slug as string)
+  const { data, error } = useSWR<Product[]>(slug ? `/api/categories/${slug}/products` : null, () =>
+    api.getCategoryProducts(slug as string)
+  );
+
+  const products = data?.products;
+
+  // Ensure products is always an array (memoized)
+  const productList = useMemo<Product[]>(
+    () => (Array.isArray(products) ? products : []),
+    [products]
   );
 
   if (error) {
@@ -69,8 +55,11 @@ export default function CategoryProducts() {
   return (
     <>
       <Head>
-        <title>{data.category.name} - Mini Store</title>
-        <meta name="description" content={`Browse ${data.category.name} products`} />
+        <title>{data?.category?.name || slug} - Mini Store</title>
+        <meta
+          name="description"
+          content={`Browse ${data?.category?.name || slug} products`}
+        />
       </Head>
 
       <div>
@@ -84,12 +73,12 @@ export default function CategoryProducts() {
             Categories
           </Link>
           <span className="mx-2">/</span>
-          <span className="text-gray-900">{data.category.name}</span>
+          <span className="text-gray-900">{data?.category?.name || slug}</span>
         </nav>
 
-        <h1 className="mb-8 text-3xl font-bold">{data.category.name}</h1>
+        <h1 className="mb-8 text-3xl font-bold">{data?.category?.name || slug}</h1>
 
-        {data.products.length === 0 ? (
+        {productList.length === 0 ? (
           <div className="py-12 text-center text-gray-500">
             <p className="mb-4 text-lg">No products found in this category</p>
             <Link href="/categories" className="inline-block text-primary hover:underline">
@@ -98,10 +87,10 @@ export default function CategoryProducts() {
           </div>
         ) : (
           <>
-            <p className="mb-6 text-gray-600">{data.products.length} products found</p>
+            <p className="mb-6 text-gray-600">{productList.length} products found</p>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {data.products.map((product) => (
+              {productList.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>

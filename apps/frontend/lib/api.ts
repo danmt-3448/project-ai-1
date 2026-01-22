@@ -118,7 +118,7 @@ class ApiClient {
   async adminLogin(
     username: string,
     password: string
-  ): Promise<{ token: string; expiresIn: number }> {
+  ): Promise<{ token: string; admin: { id: string; username: string } }> {
     return this.request('/admin/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),

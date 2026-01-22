@@ -5,7 +5,7 @@
 Đảm bảo bạn đã cài đặt:
 - **Node.js** v20 (we pin to Node 20 via `.nvmrc` files)
 - **nvm** (Node Version Manager) is recommended to switch Node versions
-- npm
+- **Yarn** v1.22.19+ (package manager, configured in `packageManager` field)
 - **PostgreSQL** 14+ (local hoặc remote)
 - **Git**
 
@@ -29,19 +29,19 @@ This repo targets Node.js 20. Before installing packages, use `nvm` to pick Node
 nvm install
 nvm use
 
-# Install workspace deps (or per-app installs)
-npm install
+# Install workspace deps with Yarn
+yarn install
 
 # Per-app (explicit):
 cd apps/backend
 nvm install
 nvm use
-npm install
+yarn install
 
 cd ../frontend
 nvm install
 nvm use
-npm install
+yarn install
 
 cd ../..
 ```
@@ -135,13 +135,13 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 
 ```bash
 # Generate Prisma Client
-npx prisma generate
+yarn prisma:generate
 
 # Run migrations (tạo tables)
-npx prisma migrate dev --name init
+yarn prisma:migrate
 
 # Check migration success
-npx prisma studio
+yarn prisma:studio
 # Mở http://localhost:5555 để xem database schema
 ```
 
@@ -151,7 +151,7 @@ npx prisma studio
 
 ```bash
 # Run seed script
-npm run db:seed
+yarn seed
 ```
 
 Seed script sẽ tạo:
@@ -173,7 +173,7 @@ npx prisma studio
 
 ```bash
 # Start cả frontend và backend
-npm run dev
+yarn dev
 ```
 
 - **Frontend**: http://localhost:3000
@@ -183,12 +183,12 @@ npm run dev
 
 Terminal 1 - Backend:
 ```bash
-npm run dev:backend
+yarn dev:backend
 ```
 
 Terminal 2 - Frontend:
 ```bash
-npm run dev:frontend
+yarn dev:frontend
 ```
 
 ---
@@ -308,7 +308,7 @@ Error: @prisma/client did not initialize yet
 
 **Solution**:
 ```bash
-npx prisma generate
+yarn prisma:generate
 ```
 
 ### Module Not Found
@@ -320,8 +320,8 @@ Error: Cannot find module 'zustand'
 **Solution**:
 ```bash
 # Reinstall dependencies
-rm -rf node_modules apps/*/node_modules
-npm install
+rm -rf node_modules apps/*/node_modules yarn.lock
+yarn install
 ```
 
 ---
@@ -352,26 +352,34 @@ npm install
 
 ```bash
 # Development
-npm run dev              # Start both FE & BE
-npm run dev:frontend     # Start frontend only
-npm run dev:backend      # Start backend only
+yarn dev                 # Start both FE & BE
+yarn dev:frontend        # Start frontend only
+yarn dev:backend         # Start backend only
 
 # Database
-npm run db:push          # Push schema changes
-npm run db:seed          # Seed database
-npm run db:studio        # Open Prisma Studio
+yarn prisma:generate     # Generate Prisma Client
+yarn prisma:migrate      # Run migrations
+yarn prisma:studio       # Open Prisma Studio
+yarn seed                # Seed database
 
 # Build
-npm run build            # Build both apps
-npm run build:frontend   # Build frontend
-npm run build:backend    # Build backend
+yarn build               # Build both apps
+yarn build:backend       # Build backend
+yarn build:frontend      # Build frontend
 
 # Production
-npm start                # Start production servers
+yarn start:backend       # Start backend production
+yarn start:frontend      # Start frontend production
 
 # Code Quality
-npm run lint             # Lint all code
-npm run format           # Format with Prettier
+yarn lint                # Lint all code
+yarn format              # Format all code with Prettier
+yarn format:check        # Check formatting without changes
+
+# Testing
+yarn test                # Run unit tests
+yarn test:e2e            # Run E2E tests with Playwright
+yarn test:e2e:ui         # Run E2E tests with UI
 ```
 
 ---
