@@ -56,10 +56,10 @@ Có thể ứng dụng cho cả project monorepo hoặc repo riêng.
 - [ ] Add order status transitions
 
 ### Database Tasks
-- [x] Prisma schema complete (prisma/schema.prisma)
+- [x] Prisma schema complete (apps/backend/prisma/schema.postgres.prisma)
 - [x] Models: Category, Product, Order, OrderItem, AdminUser
 - [x] Migrations created
-- [x] Seed script (prisma/seed.ts)
+- [x] Seed script (apps/backend/prisma/seed.ts)
 - [ ] Add indexes for performance
 - [ ] Add soft delete for products
 

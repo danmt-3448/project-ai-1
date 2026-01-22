@@ -94,8 +94,8 @@ cd apps/backend && npx prisma migrate dev --name <name>  # Create new migration
 ## Key Integration Points
 
 - **Frontend API Client**: `apps/frontend/lib/api.ts` — Centralized Axios instance with base URL from `NEXT_PUBLIC_API_URL`
-- **Prisma Schema**: `prisma/schema.prisma` — Source of truth for data models (Category, Product, Order, OrderItem, AdminUser)
-- **Seed Script**: `prisma/seed.ts` — Creates default admin (admin/admin123) and sample products
+- **Prisma Schema**: `apps/backend/prisma/schema.postgres.prisma` — Source of truth for data models (Category, Product, Order, OrderItem, AdminUser)
+- **Seed Script**: `apps/backend/prisma/seed.ts` — Creates default admin (admin/admin123) and sample products
 - **Cart-Checkout Bridge**: Cart items from Zustand store must match `checkoutItemSchema` format (productId, quantity)
 
 ## Testing Strategy

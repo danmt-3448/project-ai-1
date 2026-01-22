@@ -12,14 +12,14 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
 - **ID:** DB-01
 - **Estimate:** 2h
 - **Assignee:** Backend Dev
-- **Description:** Tạo `prisma/schema.prisma` với đầy đủ models: Category, Product, Order, OrderItem, AdminUser
+- **Description:** Tạo `apps/backend/prisma/schema.postgres.prisma` với đầy đủ models: Category, Product, Order, OrderItem, AdminUser
 - **Acceptance Criteria:**
-  - [ ] File `prisma/schema.prisma` tồn tại
+  - [ ] File `apps/backend/prisma/schema.postgres.prisma` tồn tại
   - [ ] Định nghĩa đầy đủ 5 models với fields, types, relations
   - [ ] Unique constraints cho slug, username
   - [ ] Default values (published=false, timestamps)
 - **Dependencies:** None
-- **Files:** `prisma/schema.prisma`
+- **Files:** `apps/backend/prisma/schema.postgres.prisma`
 
 #### DB-02: Tạo initial migration
 - **ID:** DB-02
@@ -27,7 +27,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
 - **Assignee:** Backend Dev
 - **Description:** Chạy `prisma migrate dev` để tạo migration đầu tiên
 - **Acceptance Criteria:**
-  - [ ] Migration file được tạo trong `prisma/migrations/`
+  - [ ] Migration file được tạo trong `apps/backend/prisma/migrations/`
   - [ ] Tables được tạo trong local Postgres
   - [ ] `prisma generate` chạy thành công
 - **Dependencies:** DB-01
@@ -37,7 +37,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
 - **ID:** DB-03
 - **Estimate:** 3h
 - **Assignee:** Backend Dev
-- **Description:** Tạo `prisma/seed.ts` để seed categories, products, admin user
+-- **Description:** Tạo `apps/backend/prisma/seed.ts` để seed categories, products, admin user
 - **Acceptance Criteria:**
   - [ ] Script tạo 2-3 categories (Áo, Quần, Phụ kiện)
   - [ ] Script tạo 5-10 products với giá, inventory, images
@@ -45,7 +45,7 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] `npm run seed` chạy thành công
   - [ ] Idempotent: chạy nhiều lần không bị duplicate
 - **Dependencies:** DB-02
-- **Files:** `prisma/seed.ts`
+- **Files:** `apps/backend/prisma/seed.ts`
 
 ---
 

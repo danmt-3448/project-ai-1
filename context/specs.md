@@ -291,7 +291,7 @@ Response (failure due to stock): status 400
 
 **Database**: SQLite for development (file: `dev.db`), PostgreSQL recommended for production. Configured via `DATABASE_URL` environment variable.
 
-**Prisma Schema** ([prisma/schema.prisma](prisma/schema.prisma)):
+**Prisma Schema** ([apps/backend/prisma/schema.postgres.prisma](apps/backend/prisma/schema.postgres.prisma)):
 
 ```prisma
 generator client {
@@ -299,10 +299,10 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"  // Change to "postgresql" for production
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
+```
 model Category {
   id       String    @id @default(cuid())
   name     String
@@ -392,7 +392,7 @@ model AdminUser {
 - Transaction 2 attempts to buy 5, sees inventory now 0, throws insufficient inventory error
 - Result: No overselling, second customer gets clear error message
 
-**Seed Data** ([prisma/seed.ts](prisma/seed.ts)):
+**Seed Data** ([apps/backend/prisma/seed.ts](apps/backend/prisma/seed.ts)):
 - 1 admin user: `username: "admin", password: "admin123"` (bcrypt hashed)
 - 3 categories: Áo (ao), Quần (quan), Phụ kiện (phu-kien)
 - 10 products with Vietnamese names, realistic prices (150k-800k VND), inventory 5-20 units
@@ -705,7 +705,7 @@ Run `nvm use` in any directory to switch to the correct Node version.
     "prisma:generate": "cd apps/backend && yarn prisma:generate",
     "prisma:migrate": "cd apps/backend && yarn prisma:migrate",
     "prisma:studio": "cd apps/backend && yarn prisma:studio",
-    "seed": "cd apps/backend && npx ts-node ../../prisma/seed.ts"
+    "seed": "cd apps/backend && npx tsx prisma/seed.ts"
   }
 }
 ```
@@ -816,7 +816,7 @@ NEXT_PUBLIC_API_URL="http://localhost:3001"  # Backend URL, change for productio
 - **ESLint**: Config embedded in each package.json, extends Next.js rules
 - **Prettier**: `.prettierrc` in root and per-app. Frontend includes Tailwind plugin for class sorting.
 - **Tailwind**: `tailwind.config.js` in frontend only, uses `content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"]`
-- **Prisma**: `prisma/schema.prisma` at repository root (shared)
+- **Prisma**: `apps/backend/prisma/schema.postgres.prisma` (backend-focused schema)
 - **Playwright**: `playwright.config.ts` at root, tests in `e2e/`
 - **Vitest**: `vitest.config.ts` per app, tests in `apps/*/tests/`
 
@@ -938,9 +938,9 @@ yarn start:frontend  # Port 3000
 
 12) What I can generate next (automation)
 
-- `prisma/schema.prisma` and `prisma/seed.ts` script
+- `apps/backend/prisma/schema.postgres.prisma` and `apps/backend/prisma/seed.ts` script
 - OpenAPI (YAML) for API endpoints
 - Starter Next.js pages and API route files per the structure above
 - CI updates to run migrations and seed test DB in workflow
 
-Tell me which of the above artifacts you'd like me to generate now and I will add them to the repo (I can start with `prisma/schema.prisma` + seeds).
+Tell me which of the above artifacts you'd like me to generate now and I will add them to the repo (I can start with `apps/backend/prisma/schema.postgres.prisma` + `apps/backend/prisma/seed.ts`).

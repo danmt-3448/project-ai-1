@@ -432,7 +432,7 @@ Notes:
 
 **Ngay bây giờ (tuần 1):**
 1. Setup repository structure theo `specs.md` section 9
-2. Tạo `prisma/schema.prisma` với các model đã define
+2. Tạo `apps/backend/prisma/schema.postgres.prisma` với các model đã define
 3. Chạy `prisma migrate dev` để tạo DB
 4. Viết seed script và chạy seed
 5. Setup frontend + backend packages

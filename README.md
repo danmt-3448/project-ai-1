@@ -65,11 +65,12 @@ Frontend (`apps/frontend/.env.local`):
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
-4. Run database migrations and seed:
+4. Run database migrations and seed (Postgres):
 ```bash
 cd apps/backend
-npx prisma migrate dev
-npx ts-node ../../prisma/seed.ts
+# Push schema to your Postgres and seed
+npx prisma db push --schema=prisma/schema.postgres.prisma
+npx tsx prisma/seed.ts
 ```
 
 5. Start development servers:
@@ -103,9 +104,9 @@ npm run dev:frontend # Frontend runs on :3000
 │       ├── components/  # React components
 │       ├── lib/         # API client
 │       └── hooks/       # Custom hooks
-├── prisma/
-│   ├── schema.prisma    # Database schema
-│   └── seed.ts          # Seed data
+├── apps/backend/prisma/
+│   ├── schema.postgres.prisma    # Database schema (Postgres)
+│   └── seed.ts                   # Seed data
 └── context/
     ├── specs.md         # Project specification
     ├── plan.md          # Development roadmap

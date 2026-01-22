@@ -36,10 +36,10 @@ Bạn là AI Specs Writer/Copilot và cần sinh ra File ĐẶC TẢ (specificat
 - **CORS**: Configured via withCors wrapper cho cross-origin requests
 - **Transaction**: Sử dụng Prisma transactions cho operations quan trọng (checkout, inventory)
 
-### 6. Data Model & DB Schema  
-- Dùng Prisma schema (prisma/schema.prisma), nêu đủ cả Product, Category, Order, OrderItem, AdminUser  
+### 6. Data Model & DB Schema
+- Dùng Prisma schema (apps/backend/prisma/schema.postgres.prisma), nêu đủ cả Product, Category, Order, OrderItem, AdminUser  
 - Liên kết bảng, unique constraints, types, default values, indexes
-- Seed script (prisma/seed.ts) với sample data
+-- Seed script (apps/backend/prisma/seed.ts) với sample data
 - **Images**: JSON string arrays parsed to arrays trong API responses
 - **Inventory Management**: Track stock levels, prevent overselling via transactions  
 
@@ -92,9 +92,9 @@ Bạn là AI Specs Writer/Copilot và cần sinh ra File ĐẶC TẢ (specificat
 - **Sprint 5**: Testing (unit + E2E), polish UI/UX, deployment
 - Milestone kiểm thử sau mỗi sprint
 
-### 11. Phụ lục:  
-- **Prisma Schema**: Full schema trong `prisma/schema.prisma`
-- **Seed Script**: Sample data trong `prisma/seed.ts`
+- ### 11. Phụ lục:  
+- **Prisma Schema**: Full schema trong `apps/backend/prisma/schema.postgres.prisma`
+- **Seed Script**: Sample data trong `apps/backend/prisma/seed.ts`
 - **API Documentation**: Endpoint list với examples trong `API_TESTING.md`
 - **Environment Variables**: Template `.env.example` files
 - **Project Structure**: Monorepo layout trong `README.md`
