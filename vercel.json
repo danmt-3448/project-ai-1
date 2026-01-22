@@ -1,5 +1,1 @@
-{
-  "buildCommand": "yarn workspace backend build",
-  "outputDirectory": "apps/backend/.next",
-  "installCommand": "yarn install"
-}
+{}
