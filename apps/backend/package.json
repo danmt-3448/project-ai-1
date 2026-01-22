@@ -5,8 +5,8 @@
   "packageManager": "yarn@1.22.19",
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "prisma generate && prisma migrate deploy && next build",
-    "vercel-build": "prisma generate && prisma migrate deploy && prisma db seed && next build",
+    "build": "prisma generate --schema=apps/backend/prisma/schema.postgres.prisma && prisma migrate deploy --schema=apps/backend/prisma/schema.postgres.prisma && next build",
+    "vercel-build": "prisma generate --schema=apps/backend/prisma/schema.postgres.prisma && prisma migrate deploy --schema=apps/backend/prisma/schema.postgres.prisma && prisma db seed --schema=apps/backend/prisma/schema.postgres.prisma && next build",
     "start": "next start -p 3001",
     "lint": "next lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
