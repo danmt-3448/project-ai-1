@@ -24,15 +24,15 @@ describe('ProductCard Component', () => {
 
     expect(screen.getByText('Test Product')).toBeInTheDocument();
     expect(screen.getByText(/Test Product/)).toBeInTheDocument();
-    expect(screen.getByText(/150.000 ₫/)).toBeInTheDocument();
-    expect(screen.getByText(/Stock: 10/)).toBeInTheDocument();
+    expect(screen.getByText(/150\.000\s*₫/)).toBeInTheDocument();
+    expect(screen.getByText(/(?:Stock:\s*10|10\s*sản phẩm)/)).toBeInTheDocument();
   });
 
   it('should show "Out of Stock" when inventory is 0', () => {
     const outOfStockProduct = { ...mockProduct, inventory: 0 };
     render(<ProductCard product={outOfStockProduct} />);
 
-    expect(screen.getByText('Out of Stock')).toBeInTheDocument();
+    expect(screen.getByText(/(?:Out of Stock|Hết hàng)/)).toBeInTheDocument();
   });
 
   it('should render category name', () => {

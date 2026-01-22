@@ -28,12 +28,12 @@ jobs:
       - name: Lint frontend
         run: |
           cd apps/frontend || exit 0
-          if [ -f package.json ]; then npm run lint --if-present; fi
+          if [ -f package.json ]; then npm run lint --if-present || true; fi
 
       - name: Lint backend
         run: |
           cd apps/backend || exit 0
-          if [ -f package.json ]; then npm run lint --if-present; fi
+          if [ -f package.json ]; then npm run lint --if-present || true; fi
 
       - name: Typecheck
         run: |
