@@ -94,7 +94,15 @@ async function handler(req: AuthRequest, res: NextApiResponse) {
         }
       }
 
-      const updateData = data.images ? { ...data, images: JSON.stringify(data.images) } : data;
+      const updateData: any = {};
+      if (data.name !== undefined) updateData.name = data.name;
+      if (data.slug !== undefined) updateData.slug = data.slug;
+      if (data.description !== undefined) updateData.description = data.description;
+      if (data.price !== undefined) updateData.price = data.price;
+      if (data.inventory !== undefined) updateData.inventory = data.inventory;
+      if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+      if (data.published !== undefined) updateData.published = data.published;
+      if (data.images !== undefined) updateData.images = JSON.stringify(data.images);
 
       const product = await prisma.product.update({
         where: { id },

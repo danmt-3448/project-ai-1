@@ -9,10 +9,11 @@ const createProductSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   price: z.number().positive('Price must be positive'),
   inventory: z.number().int().min(0, 'Inventory must be non-negative'),
-  categoryId: z.number().int().positive('Category ID is required'),
+  categoryId: z.string().min(1, 'Category ID is required'),
   images: z.array(z.string().url()).optional().default([]),
   published: z.boolean().optional().default(false),
 });
+ 
 
 async function handler(req: AuthRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
@@ -27,6 +28,8 @@ async function handler(req: AuthRequest, res: NextApiResponse) {
       }
 
       const data = validationResult.data;
+
+      const createData: any = { ...data, images: JSON.stringify(data.images || []) };
 
       // Check if slug already exists
       const existingProduct = await prisma.product.findUnique({
@@ -47,7 +50,7 @@ async function handler(req: AuthRequest, res: NextApiResponse) {
       }
 
       const product = await prisma.product.create({
-        data,
+        data: createData,
         include: {
           category: {
             select: {

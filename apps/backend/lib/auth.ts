@@ -26,9 +26,9 @@ export function verifyAdminToken(req: AuthRequest): number | null {
 }
 
 export function requireAdmin(
-  handler: (req: AuthRequest, res: NextApiResponse) => Promise<void> | void
+  handler: (req: AuthRequest, res: NextApiResponse) => Promise<any> | void
 ) {
-  return async (req: AuthRequest, res: NextApiResponse) => {
+  return async (req: AuthRequest, res: NextApiResponse): Promise<any> => {
     // Apply CORS first
     if (cors(req, res)) return;
 

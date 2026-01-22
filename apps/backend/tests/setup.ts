@@ -6,7 +6,7 @@ import path from 'path';
 const testDbPath = path.resolve(__dirname, '../test.db');
 process.env.DATABASE_URL = process.env.DATABASE_URL || `file:${testDbPath}`;
 process.env.JWT_SECRET = 'test-secret-key-for-testing-only';
-process.env.NODE_ENV = 'test';
+(process.env as any).NODE_ENV = 'test';
 
 beforeAll(async () => {
   // Setup: Could initialize test database here
