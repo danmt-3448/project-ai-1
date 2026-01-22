@@ -1,11 +1,5 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "apps/frontend/package.json", "use": "@vercel/next", "config": { "zeroConfig": true } },
-    { "src": "apps/backend/package.json", "use": "@vercel/next", "config": { "zeroConfig": true } }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/apps/backend/api/$1" },
-    { "src": "/(.*)", "dest": "/apps/frontend/$1" }
-  ]
+  "buildCommand": "cd apps/backend && yarn build",
+  "outputDirectory": "apps/backend/.next",
+  "installCommand": "yarn install"
 }
