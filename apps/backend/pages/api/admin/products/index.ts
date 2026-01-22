@@ -102,7 +102,7 @@ async function handler(req: AuthRequest, res: NextApiResponse) {
         return res.status(400).json({ error: 'Category not found' });
       }
 
-      // Convert images array to JSON string for SQLite
+      // Convert images array to JSON string for DB storage
       const product = await prisma.product.create({
         data: {
           ...data,

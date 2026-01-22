@@ -183,6 +183,173 @@ Notes:
 
 ---
 
+### Sprint 6: Order Management Enhancement (2 weeks) — NEW
+
+**Goal:** Implement comprehensive order status management system for admin with action buttons, audit logging, and inventory reconciliation.
+
+**Deliverables:**
+
+#### Backend API (Priority: High)
+- [ ] **BE-18:** Create `OrderActivity` model in Prisma schema
+  - Fields: `id`, `orderId`, `adminId`, `fromStatus`, `toStatus`, `note`, `timestamp`
+  - Indexes on `orderId` and `timestamp`
+  - Relations: `Order.activities[]`, `AdminUser` reference
+- [ ] **BE-19:** Extend `Order` model with tracking fields
+  - Add: `trackingNumber`, `carrier`, `shipDate`, `deliveryDate`, `cancellationReason` (all optional)
+- [ ] **BE-20:** Implement `PUT /api/admin/orders/:id/status` endpoint
+  - Zod validation for status transitions
+  - Business logic: validate allowed transitions (`PENDING→PROCESSING`, `PROCESSING→SHIPPED`, etc.)
+  - Support `restock` flag for cancelled orders (atomic inventory increment)
+  - Create `OrderActivity` audit log entry on each status change
+  - Handle concurrent updates with database locking (return 409 on conflict)
+  - Support `Idempotency-Key` header to prevent duplicate operations
+- [ ] **BE-21:** Implement `GET /api/admin/orders/:id/activities` endpoint
+  - Return chronological list of order status changes with admin attribution
+  - Include admin username in response (join `AdminUser`)
+- [ ] **BE-22:** Write unit tests for status transition logic
+  - Test all allowed transitions (6 test cases)
+  - Test disallowed transitions (backward transitions return 400)
+  - Test inventory restock on cancel (verify product.inventory incremented)
+  - Test idempotency: calling restock twice doesn't double inventory
+  - Test concurrent updates: two admins updating same order → 409 conflict
+- [ ] **BE-23:** Write integration API tests
+  - Happy path: `PENDING → PROCESSING → SHIPPED → DELIVERED`
+  - Cancel with restock: verify inventory changes in DB
+  - Cancel without restock: inventory unchanged
+  - Invalid transition returns 400 with clear error message
+- [ ] **BE-24:** Add database migration
+  - Create `order_activities` table
+  - Add new optional columns to `orders` table
+  - Run migration in dev and verify
+
+#### Frontend Admin UI (Priority: High)
+- [ ] **FE-24:** Create `OrderStatusBadge` component
+  - Color-coded badges: gray (PENDING), blue (PROCESSING), purple (SHIPPED), green (DELIVERED), red (CANCELLED)
+  - Props: `status`, `size`
+- [ ] **FE-25:** Implement "Mark Processing" button
+  - Show when `status === "PENDING"`
+  - Optimistic UI update
+  - No confirmation dialog
+  - Success toast: "Order marked Processing"
+  - Error handling with retry option
+- [ ] **FE-26:** Implement "Mark Shipped" button with modal
+  - Show when `status === "PROCESSING"`
+  - Modal form fields: `trackingNumber` (optional), `carrier` (dropdown: USPS, FedEx, UPS, Other), `shipDate` (date picker, default: today)
+  - Form validation: basic required field checks
+  - Optimistic UI: update badge to "Shipped" immediately
+  - On success: close modal, show toast "Order marked Shipped"
+  - On failure: revert optimistic state, show error
+- [ ] **FE-27:** Implement "Mark Delivered" button with confirmation
+  - Show when `status === "SHIPPED"`
+  - Simple confirmation dialog: "Confirm mark order as Delivered?"
+  - Optional delivery date input
+  - Disable all status action buttons after delivered (terminal state)
+  - Success toast: "Order marked Delivered"
+- [ ] **FE-28:** Implement "Cancel Order" button with strong confirmation
+  - Show when `status === "PENDING"` or `status === "PROCESSING"`
+  - Red/destructive styling
+  - Confirmation modal with:
+    - Checkbox: "Also restock inventory to products"
+    - Text area: `cancellationReason` (required)
+    - Warning text: "This action cannot be undone"
+  - On confirm: call API with `restock` flag and reason
+  - Success toast: "Order cancelled — inventory restocked" (if restocked)
+  - Error handling: if restock fails, show descriptive error
+- [ ] **FE-29:** Implement "Print Order" button
+  - Open printable view in new window/tab
+  - Styled for printing (CSS print media queries)
+  - Include: order details, buyer info, items, totals
+  - No server-side changes required (client-only)
+- [ ] **FE-30:** Add Order Activity Timeline component
+  - Fetch activities from `GET /api/admin/orders/:id/activities`
+  - Display chronological list with timestamps, admin usernames, status changes
+  - Show notes/reasons for each activity
+  - Auto-refresh on status change
+- [ ] **FE-31:** Add concurrent update detection UI
+  - On 409 conflict response, show banner: "This order changed since you opened it. [Refresh Page]"
+  - Optionally: poll for updates every 30s when order detail page open
+- [ ] **FE-32:** Implement optimistic UI patterns
+  - Disable all action buttons while API call pending
+  - Show loading spinners on buttons
+  - Revert UI state on error with clear feedback
+
+#### Testing (Priority: Medium)
+- [ ] **TEST-11:** E2E tests for order status management (Playwright)
+  - Test: Admin marks order as Processing → verify badge updates
+  - Test: Admin marks order as Shipped with tracking → verify modal, tracking saved, email triggered (mock)
+  - Test: Admin marks order as Delivered → verify confirmation, final state
+  - Test: Admin cancels order with restock → verify cancellation, inventory incremented in DB
+  - Test: Print order → verify printable view opens
+  - Test: View activity timeline → verify history displayed correctly
+- [ ] **TEST-12:** Accessibility tests
+  - Verify all buttons have `aria-label`
+  - Test keyboard navigation (Tab, Enter/Space on buttons)
+  - Test modal focus trap (Esc to close)
+  - Test screen reader announcements for status changes (aria-live)
+- [ ] **TEST-13:** Component tests (React Testing Library)
+  - Test `OrderStatusBadge` renders correct color for each status
+  - Test action buttons visibility based on order status
+  - Test modal forms validation and submission
+  - Test optimistic UI state transitions
+  - Test error state rendering
+
+#### Optional Features (Priority: Low)
+- [ ] **OPT-01:** Email notifications
+  - Configure SMTP or email service (SendGrid, Mailgun)
+  - Send email on `SHIPPED` with tracking info
+  - Send email on `DELIVERED` with confirmation
+  - Send email on `CANCELLED` with reason and refund info (if applicable)
+  - Add environment variables: `ENABLE_ORDER_EMAILS`, `SMTP_CONFIG`
+- [ ] **OPT-02:** Webhook triggers
+  - Configure webhook URL in environment variables
+  - Trigger webhook on each status change with payload: `{ orderId, fromStatus, toStatus, timestamp }`
+  - Retry logic for failed webhooks
+- [ ] **OPT-03:** Admin role permissions (future enhancement)
+  - Add `role` field to `AdminUser` model: `admin`, `manager`, `viewer`
+  - Restrict status change actions based on role
+  - `viewer` can only view orders, not change status
+
+#### Documentation
+- [ ] Update `API_TESTING.md` with new endpoints
+  - Add `PUT /api/admin/orders/:id/status` examples
+  - Add `GET /api/admin/orders/:id/activities` examples
+- [ ] Update `README.md` with order management feature
+- [ ] Add inline code comments for complex business logic (restock, transitions)
+
+**Acceptance Criteria:**
+- ✅ Admin can change order status from PENDING → PROCESSING → SHIPPED → DELIVERED via UI buttons
+- ✅ Admin can cancel order at PENDING or PROCESSING stage with optional inventory restock
+- ✅ Inventory is correctly restocked when order cancelled with restock=true
+- ✅ All status changes logged in OrderActivity with admin attribution
+- ✅ Concurrent admin updates prevented (409 conflict handling)
+- ✅ Order activity timeline displays full history with timestamps and admin usernames
+- ✅ All action buttons follow optimistic UI patterns for responsive UX
+- ✅ Confirmation modals shown for destructive actions (cancel, deliver)
+- ✅ Print order generates clean printable view
+- ✅ All features accessible via keyboard and screen reader
+- ✅ E2E tests cover all status transition flows and edge cases
+- ✅ API integration tests verify inventory restock logic and concurrent updates
+
+**Dependencies:**
+- Requires existing admin authentication system (JWT)
+- Requires existing order creation flow (checkout)
+- Requires Prisma migrations for schema changes
+
+**Risks:**
+- Concurrent updates could cause race conditions if not properly locked (mitigated with DB transactions)
+- Inventory restock logic must be idempotent to prevent double-increments
+- Email/webhook integrations may fail silently if not properly monitored
+
+**Estimated Effort:**
+- Backend API: 3-4 days (includes tests)
+- Frontend UI: 4-5 days (includes components, modals, optimistic UI)
+- E2E Testing: 2-3 days
+- Documentation: 1 day
+- Buffer for bugs/edge cases: 2-3 days
+- **Total: ~12-16 days (~2 weeks)**
+
+---
+
 ## 3. Backlog theo tính năng (Feature Backlog)
 
 ### 3.1 Database & Backend Foundation

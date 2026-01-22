@@ -47,7 +47,6 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
 - **Dependencies:** DB-02
 - **Files:** `apps/backend/prisma/seed.ts`
 
----
 
 ### Backend Foundation (BE)
 
@@ -212,7 +211,6 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
 - **Description:** Tạo trang hiển thị products theo category
 - **Acceptance Criteria:**
   - [ ] File `pages/category/[slug].tsx`
-  - [ ] Fetch products từ `/api/categories/:slug/products`
   - [ ] Display category name
   - [ ] Use ProductList component
   - [ ] Filter/sort UI (optional sprint 2)
@@ -224,7 +222,6 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
 #### FE-07: Setup API client và hooks
 - **ID:** FE-07
 - **Estimate:** 3h
-- **Assignee:** Frontend Dev
 - **Description:** Tạo API client và custom hooks với SWR
 - **Acceptance Criteria:**
   - [ ] File `lib/api.ts` với fetch wrappers
@@ -1299,6 +1296,491 @@ Breakdown chi tiết các task từ `specs.md` và `plan.md` thành các đầu 
   - [ ] SSL certificate auto-provisioned
 - **Dependencies:** DEPLOY-05
 - **Files:** None (DNS config)
+
+---
+
+## Sprint 6: Order Management Enhancement (Admin)
+
+Goal: Implement comprehensive order status management for admins with audit logging, idempotent inventory restock, concurrency handling, and responsive UI with action buttons.
+
+---
+
+### Database & Migration (DB)
+
+#### DB-18: Create OrderActivity model in Prisma schema
+- **ID:** DB-18
+- **Estimate:** 3h
+- **Assignee:** Backend Dev
+- **Description:** Add `OrderActivity` model to track all order status changes with admin attribution
+- **Acceptance Criteria:**
+  - [ ] File `apps/backend/prisma/schema.postgres.prisma` updated
+  - [ ] Model fields: `id`, `orderId`, `adminId`, `fromStatus`, `toStatus`, `note`, `timestamp`
+  - [ ] Relations: `Order.activities[]`, `AdminUser` reference
+  - [ ] Index on `orderId` for fast queries
+  - [ ] Index on `timestamp` for chronological sorting
+  - [ ] Map to `order_activities` table
+- **Dependencies:** BE-07 (Order model exists)
+- **Files:** `apps/backend/prisma/schema.postgres.prisma`
+
+#### DB-19: Extend Order model with tracking fields
+- **ID:** DB-19
+- **Estimate:** 2h
+- **Assignee:** Backend Dev
+- **Description:** Add optional shipping and cancellation tracking fields to Order model
+- **Acceptance Criteria:**
+  - [ ] Add `trackingNumber String?`
+  - [ ] Add `carrier String?` (USPS, FedEx, UPS, Other)
+  - [ ] Add `shipDate DateTime?`
+  - [ ] Add `deliveryDate DateTime?`
+  - [ ] Add `cancellationReason String?`
+  - [ ] All fields optional (nullable)
+- **Dependencies:** DB-18
+- **Files:** `apps/backend/prisma/schema.postgres.prisma`
+
+#### DB-20: Create and run migration
+- **ID:** DB-20
+- **Estimate:** 2h
+- **Assignee:** Backend Dev
+- **Description:** Generate and apply Prisma migration for OrderActivity and Order extensions
+- **Acceptance Criteria:**
+  - [ ] Run `prisma migrate dev --name add_order_activity`
+  - [ ] Migration file created in `apps/backend/prisma/migrations/`
+  - [ ] `order_activities` table created with indexes
+  - [ ] `orders` table altered with new columns
+  - [ ] Migration applied successfully locally
+  - [ ] `prisma generate` succeeds
+  - [ ] Test migration rollback works (optional)
+- **Dependencies:** DB-18, DB-19
+- **Files:** `apps/backend/prisma/migrations/*/migration.sql`
+
+---
+
+### Backend API (BE)
+
+#### BE-18: Implement PUT /api/admin/orders/:id/status
+- **ID:** BE-18
+- **Estimate:** 2d (16h) — Complex, critical
+- **Assignee:** Backend Dev
+- **Description:** Endpoint to change order status with comprehensive validation, audit logging, inventory restock, idempotency, and concurrency control
+- **Acceptance Criteria:**
+  - [ ] File `apps/backend/pages/api/admin/orders/[id].ts` (PUT handler)
+  - [ ] Protected by `requireAdmin` middleware
+  - [ ] Zod schema validates: `status` (enum), `trackingNumber`, `carrier`, `shipDate`, `deliveryDate`, `cancellationReason`, `note`, `restock` (boolean)
+  - [ ] Enforce allowed transitions: PENDING→PROCESSING→SHIPPED→DELIVERED, PENDING/PROCESSING→CANCELLED
+  - [ ] Return 400 for invalid transitions with clear error message
+  - [ ] Prisma transaction wraps all operations:
+    - [ ] Fetch current order with `FOR UPDATE` lock (prevents concurrent updates)
+    - [ ] If `restock=true` AND status=CANCELLED: increment inventory for each order item
+    - [ ] Update order status and optional fields
+    - [ ] Create `OrderActivity` record with `adminId`, `fromStatus`, `toStatus`, `note`
+  - [ ] Support `Idempotency-Key` header: check if activity already exists for this key
+  - [ ] Return 409 on concurrent update conflict
+  - [ ] Return 200 with updated order + activities on success
+  - [ ] Comprehensive error handling with descriptive messages
+- **Dependencies:** DB-20, BE-02 (Prisma), BE-10 (Auth middleware)
+- **Files:** `apps/backend/pages/api/admin/orders/[id].ts`
+
+#### BE-19: Implement GET /api/admin/orders/:id/activities
+- **ID:** BE-19
+- **Estimate:** 4h
+- **Assignee:** Backend Dev
+- **Description:** Endpoint to fetch chronological order activity history with admin usernames
+- **Acceptance Criteria:**
+  - [ ] File `apps/backend/pages/api/admin/orders/[id]/activities.ts`
+  - [ ] Protected by `requireAdmin` middleware
+  - [ ] Return array of activities sorted by timestamp ASC
+  - [ ] Include admin info: `{ id, fromStatus, toStatus, note, timestamp, admin: { id, username } }`
+  - [ ] Use Prisma `include: { admin: { select: { id: true, username: true } } }`
+  - [ ] Optional pagination with `?page=1&limit=20` (default: all)
+  - [ ] Return 404 if order doesn't exist
+  - [ ] Return 200 with `{ activities: [...], total }` on success
+- **Dependencies:** DB-20, BE-18
+- **Files:** `apps/backend/pages/api/admin/orders/[id]/activities.ts`
+
+#### BE-20: Write unit tests for status transition logic
+- **ID:** BE-20
+- **Estimate:** 1d (8h)
+- **Assignee:** Backend Dev / QA
+- **Description:** Comprehensive unit tests for order status business logic
+- **Acceptance Criteria:**
+  - [ ] File `apps/backend/tests/orderStatus.test.ts`
+  - [ ] Test allowed transitions:
+    - [ ] PENDING → PROCESSING (success)
+    - [ ] PROCESSING → SHIPPED (success)
+    - [ ] SHIPPED → DELIVERED (success)
+    - [ ] PENDING → CANCELLED (success)
+    - [ ] PROCESSING → CANCELLED (success)
+  - [ ] Test invalid transitions:
+    - [ ] DELIVERED → PROCESSING (400 error)
+    - [ ] SHIPPED → PENDING (400 error)
+    - [ ] CANCELLED → anything (400 error)
+  - [ ] Test inventory restock:
+    - [ ] Cancel with restock=true increments inventory correctly
+    - [ ] Cancel with restock=false leaves inventory unchanged
+    - [ ] Restock is idempotent (calling twice doesn't double-increment)
+  - [ ] Test audit logging:
+    - [ ] OrderActivity created on every status change
+    - [ ] adminId, fromStatus, toStatus recorded correctly
+  - [ ] Test concurrency:
+    - [ ] Simulate two concurrent updates → one succeeds, other gets 409
+  - [ ] Mock Prisma client, isolate business logic
+- **Dependencies:** BE-18
+- **Files:** `apps/backend/tests/orderStatus.test.ts`
+
+#### BE-21: Write integration API tests
+- **ID:** BE-21
+- **Estimate:** 1d (8h)
+- **Assignee:** Backend Dev / QA
+- **Description:** Integration tests for full API flows with test database
+- **Acceptance Criteria:**
+  - [ ] File `apps/backend/tests/api/adminOrders.test.ts`
+  - [ ] Test happy path: PENDING → PROCESSING → SHIPPED → DELIVERED
+  - [ ] Test cancel with restock: verify inventory incremented in DB
+  - [ ] Test cancel without restock: inventory unchanged
+  - [ ] Test invalid transition returns 400 with error message
+  - [ ] Test unauthorized request returns 401
+  - [ ] Test idempotency: same Idempotency-Key returns cached result
+  - [ ] Test concurrent updates: use Promise.all to simulate race condition
+  - [ ] Use test DB (separate from dev/prod)
+  - [ ] Seed test data before each test, clean up after
+- **Dependencies:** BE-20
+- **Files:** `apps/backend/tests/api/adminOrders.test.ts`
+
+---
+
+### Frontend Admin UI (FE)
+
+#### FE-24: Create OrderStatusBadge component
+- **ID:** FE-24
+- **Estimate:** 4h
+- **Assignee:** Frontend Dev
+- **Description:** Reusable badge component to display order status with color coding
+- **Acceptance Criteria:**
+  - [ ] File `apps/frontend/components/OrderStatusBadge.tsx`
+  - [ ] Props: `status: OrderStatus`, `size?: 'sm' | 'md' | 'lg'`
+  - [ ] Color mapping:
+    - [ ] PENDING: gray (`bg-gray-200 text-gray-700`)
+    - [ ] PROCESSING: blue (`bg-blue-200 text-blue-700`)
+    - [ ] SHIPPED: purple (`bg-purple-200 text-purple-700`)
+    - [ ] DELIVERED: green (`bg-green-200 text-green-700`)
+    - [ ] CANCELLED: red (`bg-red-200 text-red-700`)
+  - [ ] Accessible text (screen readers)
+  - [ ] Responsive to size prop
+  - [ ] Export TypeScript type for OrderStatus
+- **Dependencies:** None (standalone component)
+- **Files:** `apps/frontend/components/OrderStatusBadge.tsx`
+
+#### FE-25: Implement "Mark Processing" button
+- **ID:** FE-25
+- **Estimate:** 6h
+- **Assignee:** Frontend Dev
+- **Description:** Action button to transition order from PENDING to PROCESSING
+- **Acceptance Criteria:**
+  - [ ] Button visible only when `order.status === 'PENDING'`
+  - [ ] On click: call `PUT /api/admin/orders/:id/status` with `{ status: 'PROCESSING' }`
+  - [ ] Optimistic UI update: immediately show PROCESSING badge
+  - [ ] Disable button + show loading spinner while API call pending
+  - [ ] On success: show success toast "Order marked Processing ✓"
+  - [ ] On error: revert optimistic update, show error toast with retry option
+  - [ ] Error toast includes descriptive message from API response
+  - [ ] Use SWR `mutate()` to revalidate order data after success
+- **Dependencies:** BE-18, FE-24
+- **Files:** `apps/frontend/pages/admin/orders/[id].tsx` or `components/OrderActions/MarkProcessingButton.tsx`
+
+#### FE-26: Implement "Mark Shipped" button with modal
+- **ID:** FE-26
+- **Estimate:** 1d (8h)
+- **Assignee:** Frontend Dev
+- **Description:** Action button + modal to transition order to SHIPPED with tracking info
+- **Acceptance Criteria:**
+  - [ ] Button visible only when `order.status === 'PROCESSING'`
+  - [ ] On click: open modal with form
+  - [ ] Modal form fields:
+    - [ ] `trackingNumber` (text input, optional)
+    - [ ] `carrier` (dropdown: USPS, FedEx, UPS, Other, optional)
+    - [ ] `shipDate` (date picker, default: today, optional)
+  - [ ] Form validation: basic checks (no required fields for MVP)
+  - [ ] On submit: call `PUT /api/admin/orders/:id/status` with form data + `{ status: 'SHIPPED' }`
+  - [ ] Optimistic UI: update badge to SHIPPED immediately
+  - [ ] On success: close modal, show toast "Order marked Shipped ✓"
+  - [ ] On failure: revert optimistic state, show error toast
+  - [ ] Modal accessible (Esc to close, focus trap, Tab navigation)
+  - [ ] Use Headless UI or Radix UI for modal (optional)
+- **Dependencies:** BE-18, FE-24
+- **Files:** `apps/frontend/components/OrderActions/MarkShippedButton.tsx`, `apps/frontend/components/OrderActions/MarkShippedModal.tsx`
+
+#### FE-27: Implement "Mark Delivered" button with confirmation
+- **ID:** FE-27
+- **Estimate:** 6h
+- **Assignee:** Frontend Dev
+- **Description:** Action button to transition order to DELIVERED (terminal state)
+- **Acceptance Criteria:**
+  - [ ] Button visible only when `order.status === 'SHIPPED'`
+  - [ ] On click: show confirmation dialog "Confirm mark order as Delivered?"
+  - [ ] Optional: date picker for `deliveryDate` (default: today)
+  - [ ] On confirm: call `PUT /api/admin/orders/:id/status` with `{ status: 'DELIVERED' }`
+  - [ ] Optimistic UI update
+  - [ ] Disable ALL action buttons after DELIVERED (terminal state)
+  - [ ] On success: show toast "Order marked Delivered ✓"
+  - [ ] On failure: revert optimistic state, show error
+  - [ ] Confirmation dialog accessible (keyboard navigation)
+- **Dependencies:** BE-18, FE-24
+- **Files:** `apps/frontend/components/OrderActions/MarkDeliveredButton.tsx`
+
+#### FE-28: Implement "Cancel Order" button with strong confirmation
+- **ID:** FE-28
+- **Estimate:** 1d (8h)
+- **Assignee:** Frontend Dev
+- **Description:** Destructive action button to cancel order with optional inventory restock
+- **Acceptance Criteria:**
+  - [ ] Button visible only when `order.status === 'PENDING'` or `'PROCESSING'`
+  - [ ] Red/destructive styling (`bg-red-600 text-white`)
+  - [ ] On click: open confirmation modal with:
+    - [ ] Checkbox: "Also restock inventory to products"
+    - [ ] Text area: `cancellationReason` (required, min 10 chars)
+    - [ ] Warning text: "This action cannot be undone"
+    - [ ] Preview: list items that will be restocked (if checkbox checked)
+  - [ ] Form validation: require cancellationReason
+  - [ ] On confirm: call `PUT /api/admin/orders/:id/status` with `{ status: 'CANCELLED', restock: boolean, cancellationReason: string }`
+  - [ ] Optimistic UI update to CANCELLED badge
+  - [ ] On success: show toast "Order cancelled — inventory restocked" (if restock=true) or "Order cancelled"
+  - [ ] On failure: revert optimistic state, show descriptive error (e.g., "Product no longer exists, cannot restock")
+  - [ ] Error handling for partial failures
+  - [ ] Modal accessible (focus trap, keyboard nav)
+- **Dependencies:** BE-18, FE-24
+- **Files:** `apps/frontend/components/OrderActions/CancelOrderButton.tsx`, `apps/frontend/components/OrderActions/CancelOrderModal.tsx`
+
+#### FE-29: Implement "Print Order" button
+- **ID:** FE-29
+- **Estimate:** 4h
+- **Assignee:** Frontend Dev
+- **Description:** Client-side print functionality for order details
+- **Acceptance Criteria:**
+  - [ ] Button always visible to admin (no status restriction)
+  - [ ] On click: open new window/tab with printable order view
+  - [ ] Printable view includes: order ID, buyer info, items list, totals, order status
+  - [ ] CSS print media queries for clean printing
+  - [ ] Remove navigation, action buttons from print view
+  - [ ] Use `window.print()` or generate printable HTML route `/admin/orders/[id]/print`
+  - [ ] No backend changes required (client-only)
+  - [ ] Button icon: printer SVG
+- **Dependencies:** None (uses existing order data)
+- **Files:** `apps/frontend/components/OrderActions/PrintOrderButton.tsx`, `apps/frontend/pages/admin/orders/[id]/print.tsx` (optional)
+
+#### FE-30: Create Order Activity Timeline component
+- **ID:** FE-30
+- **Estimate:** 1d (8h)
+- **Assignee:** Frontend Dev
+- **Description:** Display chronological history of order status changes
+- **Acceptance Criteria:**
+  - [ ] File `apps/frontend/components/OrderActivityTimeline.tsx`
+  - [ ] Fetch data from `GET /api/admin/orders/:id/activities`
+  - [ ] Display list of activities with:
+    - [ ] Timestamp (formatted: "Jan 22, 2026 14:35")
+    - [ ] Admin username
+    - [ ] Status transition: "Changed from PENDING to PROCESSING"
+    - [ ] Note/reason (if exists)
+  - [ ] Visual timeline design (vertical line with dots)
+  - [ ] Most recent activity at top
+  - [ ] Loading state, error state, empty state
+  - [ ] Auto-refresh after status change action (listen to SWR revalidation)
+  - [ ] Collapse/expand long notes
+- **Dependencies:** BE-19
+- **Files:** `apps/frontend/components/OrderActivityTimeline.tsx`
+
+#### FE-31: Add concurrent update detection UI
+- **ID:** FE-31
+- **Estimate:** 4h
+- **Assignee:** Frontend Dev
+- **Description:** Handle 409 conflict responses and stale order data
+- **Acceptance Criteria:**
+  - [ ] Catch 409 status from API responses
+  - [ ] Show banner at top of order detail page: "⚠️ This order changed since you opened it. [Refresh Page]"
+  - [ ] Banner styled with warning color (yellow/orange)
+  - [ ] "Refresh Page" button triggers SWR revalidation
+  - [ ] Optional: poll for updates every 30s when order detail page is open (use SWR `refreshInterval`)
+  - [ ] Display "Last updated: X seconds ago" timestamp
+  - [ ] Clear banner after successful refresh
+- **Dependencies:** BE-18 (returns 409)
+- **Files:** `apps/frontend/pages/admin/orders/[id].tsx`, `apps/frontend/components/ConflictBanner.tsx`
+
+#### FE-32: Implement optimistic UI patterns
+- **ID:** FE-32
+- **Estimate:** 4h
+- **Assignee:** Frontend Dev
+- **Description:** Consistent optimistic UI behavior across all action buttons
+- **Acceptance Criteria:**
+  - [ ] Disable ALL action buttons while any API call is pending
+  - [ ] Show loading spinner on clicked button
+  - [ ] Optimistic update applied immediately (status badge changes)
+  - [ ] Revert UI state on error with clear feedback
+  - [ ] Use SWR `optimisticData` option or local state management
+  - [ ] Prevent double-clicks with debouncing (500ms)
+  - [ ] Loading state shows "Processing..." text on button
+  - [ ] After success, re-enable buttons based on new status
+- **Dependencies:** FE-25, FE-26, FE-27, FE-28
+- **Files:** `apps/frontend/pages/admin/orders/[id].tsx`, `apps/frontend/hooks/useOptimisticOrderUpdate.ts`
+
+---
+
+### Testing (QA)
+
+#### TEST-11: E2E Playwright tests for order status management
+- **ID:** TEST-11
+- **Estimate:** 2d (16h)
+- **Assignee:** QA Engineer / Frontend Dev
+- **Description:** End-to-end tests covering all admin order status flows
+- **Acceptance Criteria:**
+  - [ ] File `e2e/admin-order-status.spec.ts`
+  - [ ] Test: Admin marks order as Processing → verify badge updates, activity logged
+  - [ ] Test: Admin marks order as Shipped with tracking → verify modal, tracking saved, activity logged
+  - [ ] Test: Admin marks order as Delivered → verify confirmation, final state, no more actions
+  - [ ] Test: Admin cancels order with restock → verify cancellation, inventory incremented in DB
+  - [ ] Test: Print order → verify printable view opens
+  - [ ] Test: View activity timeline → verify history displayed correctly with admin names
+  - [ ] Test: Concurrent update conflict → verify 409 banner shown
+  - [ ] Test: Invalid transition blocked → verify 400 error message
+  - [ ] Run in CI against test deployment or local docker-compose
+  - [ ] Use Playwright fixtures for test data setup/teardown
+- **Dependencies:** BE-18, FE-25, FE-26, FE-27, FE-28, FE-30
+- **Files:** `e2e/admin-order-status.spec.ts`
+
+#### TEST-12: Accessibility tests
+- **ID:** TEST-12
+- **Estimate:** 6h
+- **Assignee:** Frontend Dev / QA
+- **Description:** Verify WCAG 2.1 AA compliance for order management UI
+- **Acceptance Criteria:**
+  - [ ] All action buttons have descriptive `aria-label` (e.g., "Mark order #123 as shipped")
+  - [ ] Keyboard navigation: Tab through buttons, Enter/Space activates
+  - [ ] Modal focus trap: Tab cycles within modal, Esc closes
+  - [ ] After modal close, focus returns to trigger button
+  - [ ] Loading states announced: `aria-busy="true"`, `aria-live="polite"` for status updates
+  - [ ] Error messages have `role="alert"` for immediate screen reader announcement
+  - [ ] OrderStatusBadge has accessible text (not just color)
+  - [ ] Timeline has semantic HTML: `<ol>`, `<li>`, `<time>`
+  - [ ] Run axe-core or Lighthouse accessibility audit (score ≥95)
+  - [ ] Test with keyboard only (no mouse)
+  - [ ] Test with screen reader (NVDA/JAWS/VoiceOver)
+- **Dependencies:** FE-25, FE-26, FE-27, FE-28, FE-30
+- **Files:** `apps/frontend/tests/accessibility/orderActions.test.tsx`
+
+#### TEST-13: Component tests (React Testing Library)
+- **ID:** TEST-13
+- **Estimate:** 1d (8h)
+- **Assignee:** Frontend Dev
+- **Description:** Unit tests for React components
+- **Acceptance Criteria:**
+  - [ ] File `apps/frontend/tests/components/OrderStatusBadge.test.tsx`
+    - [ ] Renders correct color for each status
+    - [ ] Renders correct text
+  - [ ] File `apps/frontend/tests/components/OrderActions.test.tsx`
+    - [ ] Action buttons visibility based on order status
+    - [ ] Modal opens on button click
+    - [ ] Form validation works
+    - [ ] API call triggered with correct payload
+  - [ ] File `apps/frontend/tests/components/OrderActivityTimeline.test.tsx`
+    - [ ] Renders activity list correctly
+    - [ ] Displays admin usernames
+    - [ ] Formats timestamps
+    - [ ] Shows empty state when no activities
+  - [ ] Mock API responses with MSW (Mock Service Worker)
+  - [ ] Test optimistic UI state transitions
+  - [ ] Test error state rendering
+  - [ ] All tests pass in CI
+- **Dependencies:** FE-24, FE-25, FE-26, FE-27, FE-28, FE-30
+- **Files:** `apps/frontend/tests/components/*.test.tsx`
+
+---
+
+### Documentation (DOC)
+
+#### DOC-03: Update API_TESTING.md with new endpoints
+- **ID:** DOC-03
+- **Estimate:** 4h
+- **Assignee:** Backend Dev
+- **Description:** Document new order status management endpoints
+- **Acceptance Criteria:**
+  - [ ] File `API_TESTING.md` updated
+  - [ ] Add section: "Order Status Management (Admin)"
+  - [ ] Document `PUT /api/admin/orders/:id/status`:
+    - [ ] Request body examples for each transition
+    - [ ] Idempotency-Key header usage
+    - [ ] Response examples (success, 400, 409)
+    - [ ] Curl examples
+  - [ ] Document `GET /api/admin/orders/:id/activities`:
+    - [ ] Response format
+    - [ ] Curl example
+  - [ ] Explain restock behavior and idempotency
+  - [ ] List allowed status transitions
+  - [ ] Error codes and meanings
+- **Dependencies:** BE-18, BE-19
+- **Files:** `API_TESTING.md`
+
+#### DOC-04: Update README with Order Management feature
+- **ID:** DOC-04
+- **Estimate:** 2h
+- **Assignee:** Tech Lead / PM
+- **Description:** Add Order Management feature to main README
+- **Acceptance Criteria:**
+  - [ ] File `README.md` updated
+  - [ ] Add section: "Features > Order Management"
+  - [ ] Describe admin capabilities: status transitions, tracking, cancellation, restock
+  - [ ] Add screenshot of admin order detail page (optional)
+  - [ ] Link to API_TESTING.md for technical details
+  - [ ] Update tech stack section if new dependencies added
+- **Dependencies:** All Sprint 6 tasks done
+- **Files:** `README.md`
+
+#### DOC-05: Add inline code comments for complex logic
+- **ID:** DOC-05
+- **Estimate:** 2h
+- **Assignee:** Backend Dev
+- **Description:** Document complex business logic in code
+- **Acceptance Criteria:**
+  - [ ] Add JSDoc comments to `PUT /api/admin/orders/:id/status` handler
+  - [ ] Explain transition validation logic
+  - [ ] Explain inventory restock atomicity
+  - [ ] Explain idempotency implementation
+  - [ ] Explain FOR UPDATE lock usage
+  - [ ] Add comments to Prisma transaction steps
+  - [ ] Add type definitions with TSDoc
+- **Dependencies:** BE-18
+- **Files:** `apps/backend/pages/api/admin/orders/[id].ts`
+
+---
+
+### Sprint 6 Summary
+
+**Total tasks:** 28 tasks
+
+**Estimated effort:**
+- DB: 7h (3 tasks)
+- Backend: 5.5d + 8h = 52h (5 tasks)
+- Frontend: 6d + 16h = 64h (9 tasks)
+- Testing: 3d + 6h = 30h (3 tasks)
+- Documentation: 8h (3 tasks)
+- **Total: ~153 hours (~3-4 weeks for 1 dev, or 2 weeks for 2 devs)**
+
+**Dependencies:**
+- DB-18/19/20 must be done first (schema + migration)
+- BE-18/19 can proceed in parallel after DB done
+- FE tasks depend on BE-18/19
+- Testing depends on both BE + FE
+- Docs can be done alongside implementation
+
+**Critical path:**
+1. DB-18/19/20 (schema + migration) — 1 day
+2. BE-18 (status endpoint) — 2 days
+3. BE-19 (activities endpoint) — 0.5 days
+4. FE-24-32 (UI components + actions) — 5-6 days
+5. TEST-11-13 (E2E + accessibility + unit) — 3 days
+6. DOC-03-05 (documentation) — 1 day
+
+**Risks:**
+- Inventory restock idempotency logic is complex → allocate extra time for testing
+- Concurrency handling requires careful DB transaction design → review with senior dev
+- UI optimistic updates can get out of sync → implement robust error handling
 
 ---
 

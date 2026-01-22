@@ -5,10 +5,10 @@ import { cors } from './cors';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 export interface AuthRequest extends NextApiRequest {
-  adminId?: number;
+  adminId?: string;
 }
 
-export function verifyAdminToken(req: AuthRequest): number | null {
+export function verifyAdminToken(req: AuthRequest): string | null {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -18,7 +18,7 @@ export function verifyAdminToken(req: AuthRequest): number | null {
   const token = authHeader.substring(7);
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { adminId: number };
+    const decoded = jwt.verify(token, JWT_SECRET) as { adminId: string };
     return decoded.adminId;
   } catch (error) {
     return null;

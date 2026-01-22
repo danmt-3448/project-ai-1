@@ -155,6 +155,55 @@ class ApiClient {
       headers: { Authorization: `Bearer ${token}` },
     });
   }
+
+  // Order Status Management APIs (Sprint 6)
+  async adminUpdateOrderStatus(
+    token: string,
+    orderId: string,
+    data: {
+      status: string;
+      note?: string;
+      trackingNumber?: string;
+      carrier?: string;
+      shipDate?: string;
+      deliveryDate?: string;
+      cancellationReason?: string;
+      shouldRestock?: boolean;
+    },
+    idempotencyKey?: string
+  ): Promise<{ order: Order; restocked?: Array<{ productId: string; quantity: number }> }> {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+    };
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+    return this.request(`/admin/orders/${orderId}/status`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminGetOrderActivities(
+    token: string,
+    orderId: string
+  ): Promise<{
+    orderId: string;
+    currentStatus: string;
+    activities: Array<{
+      id: string;
+      fromStatus: string;
+      toStatus: string;
+      note: string | null;
+      timestamp: string;
+      admin: { id: string; username: string };
+    }>;
+  }> {
+    return this.request(`/admin/orders/${orderId}/activities`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
 }
 
 export const api = new ApiClient(API_BASE_URL);

@@ -687,4 +687,237 @@ curl -X POST http://localhost:3001/api/checkout \
 
 ---
 
+## 📦 Order Status Management (Sprint 6)
+
+### 1. PUT /api/admin/orders/:id/status
+
+Update order status with audit trail and inventory management.
+
+**Authentication**: Required (Bearer token)
+
+**Allowed Transitions**:
+- PENDING → PROCESSING
+- PROCESSING → SHIPPED
+- SHIPPED → DELIVERED
+- PENDING/PROCESSING → CANCELLED
+
+**Terminal States**: DELIVERED, CANCELLED (cannot be changed)
+
+#### Mark Order as Processing
+
+```bash
+curl -X PUT http://localhost:3001/api/admin/orders/{ORDER_ID}/status \
+  -H "Authorization: Bearer {YOUR_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "PROCESSING",
+    "note": "Order confirmed and ready for preparation"
+  }'
+```
+
+**Expected Response**:
+```json
+{
+  "order": {
+    "id": "order-123",
+    "status": "PROCESSING",
+    "buyerName": "John Doe",
+    "buyerEmail": "john@example.com",
+    "totalPrice": 299.99,
+    "updatedAt": "2026-01-22T10:30:00Z"
+  }
+}
+```
+
+#### Mark Order as Shipped (with tracking)
+
+```bash
+curl -X PUT http://localhost:3001/api/admin/orders/{ORDER_ID}/status \
+  -H "Authorization: Bearer {YOUR_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "SHIPPED",
+    "trackingNumber": "FDX1234567890",
+    "carrier": "FedEx",
+    "shipDate": "2026-01-22T14:00:00Z",
+    "note": "Shipped via FedEx Express"
+  }'
+```
+
+**Expected Response**:
+```json
+{
+  "order": {
+    "id": "order-123",
+    "status": "SHIPPED",
+    "trackingNumber": "FDX1234567890",
+    "carrier": "FedEx",
+    "shipDate": "2026-01-22T14:00:00Z",
+    "updatedAt": "2026-01-22T14:05:00Z"
+  }
+}
+```
+
+#### Mark Order as Delivered
+
+```bash
+curl -X PUT http://localhost:3001/api/admin/orders/{ORDER_ID}/status \
+  -H "Authorization: Bearer {YOUR_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "DELIVERED",
+    "deliveryDate": "2026-01-24T16:30:00Z",
+    "note": "Successfully delivered to customer"
+  }'
+```
+
+#### Cancel Order (with inventory restock)
+
+```bash
+curl -X PUT http://localhost:3001/api/admin/orders/{ORDER_ID}/status \
+  -H "Authorization: Bearer {YOUR_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "CANCELLED",
+    "cancellationReason": "Customer requested cancellation",
+    "shouldRestock": true,
+    "note": "Order cancelled per customer request"
+  }'
+```
+
+**Expected Response with Restock**:
+```json
+{
+  "order": {
+    "id": "order-123",
+    "status": "CANCELLED",
+    "cancellationReason": "Customer requested cancellation",
+    "updatedAt": "2026-01-22T11:00:00Z"
+  },
+  "restocked": [
+    {
+      "productId": "prod-1",
+      "quantity": 2
+    },
+    {
+      "productId": "prod-2",
+      "quantity": 1
+    }
+  ]
+}
+```
+
+#### Idempotency Support
+
+Use `Idempotency-Key` header to prevent duplicate operations:
+
+```bash
+curl -X PUT http://localhost:3001/api/admin/orders/{ORDER_ID}/status \
+  -H "Authorization: Bearer {YOUR_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: unique-key-12345" \
+  -d '{
+    "status": "PROCESSING",
+    "note": "Order confirmed"
+  }'
+```
+
+#### Error Responses
+
+**Invalid Transition** (400):
+```json
+{
+  "error": "Invalid status transition",
+  "message": "Cannot transition from DELIVERED to PROCESSING"
+}
+```
+
+**Missing Required Fields** (400):
+```json
+{
+  "error": "Validation failed",
+  "details": {
+    "trackingNumber": "Required when status is SHIPPED",
+    "carrier": "Required when status is SHIPPED"
+  }
+}
+```
+
+**Concurrent Update Conflict** (409):
+```json
+{
+  "error": "Conflict",
+  "message": "Order was modified by another admin. Please refresh and try again."
+}
+```
+
+**Unauthorized** (401):
+```json
+{
+  "error": "Unauthorized",
+  "message": "Invalid or missing token"
+}
+```
+
+### 2. GET /api/admin/orders/:id/activities
+
+Retrieve order status change history (audit trail).
+
+**Authentication**: Required (Bearer token)
+
+```bash
+curl http://localhost:3001/api/admin/orders/{ORDER_ID}/activities \
+  -H "Authorization: Bearer {YOUR_TOKEN}"
+```
+
+**Expected Response**:
+```json
+{
+  "orderId": "order-123",
+  "currentStatus": "SHIPPED",
+  "activities": [
+    {
+      "id": "act-1",
+      "fromStatus": "PENDING",
+      "toStatus": "PROCESSING",
+      "note": "Order confirmed and ready for preparation",
+      "timestamp": "2026-01-22T10:30:00Z",
+      "admin": {
+        "id": "admin-1",
+        "username": "admin"
+      }
+    },
+    {
+      "id": "act-2",
+      "fromStatus": "PROCESSING",
+      "toStatus": "SHIPPED",
+      "note": "Shipped via FedEx Express",
+      "timestamp": "2026-01-22T14:05:00Z",
+      "admin": {
+        "id": "admin-1",
+        "username": "admin"
+      }
+    }
+  ]
+}
+```
+
+**Empty History** (new order):
+```json
+{
+  "orderId": "order-456",
+  "currentStatus": "PENDING",
+  "activities": []
+}
+```
+
+**Order Not Found** (404):
+```json
+{
+  "error": "Order not found"
+}
+```
+
+---
+
 **All API endpoints tested and working! ✅**

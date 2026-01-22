@@ -17,7 +17,7 @@ This specification covers both Frontend (Next.js + TypeScript) and Backend (Next
 **Tech Stack (Implemented)**
 - **Frontend**: Next.js 14.0.4 (Pages Router), React 18.2.0, TypeScript 5.3.3, Tailwind CSS 3.3.6, SWR 2.2.4 (data fetching), Zustand 4.4.7 (state management with persist middleware), Axios 1.6.2 (API client)
 - **Backend**: Next.js 14.0.4 (API Routes), TypeScript 5.3.3, Prisma ORM 5.7.0, Zod 3.22.4 (validation), jsonwebtoken 9.0.2 (JWT auth), bcryptjs 2.4.3 (password hashing)
-- **Database**: SQLite (development), PostgreSQL (production recommended)
+- **Database**:  PostgreSQL
 - **Package Manager**: Yarn 1.22.19 (enforced via packageManager field), workspace support enabled
 - **Code Quality**: Prettier 3.1.0/3.1.1 (with prettier-plugin-tailwindcss 0.5.9 for FE), ESLint 8.54.0, TypeScript strict mode
 - **Node Version**: Node.js 20+ (enforced via .nvmrc files at root and per-app)
@@ -190,6 +190,229 @@ This specification covers both Frontend (Next.js + TypeScript) and Backend (Next
   - **Response 200**: `{ data: Order[], total, page, limit, totalPages }` (includes items relation)
   - **Errors**: 401, 500
 
+**Order Status Management (Admin)**:
+
+- `PUT /api/admin/orders/:id/status` ([admin/orders/[id].ts](apps/backend/pages/api/admin/orders/[id].ts))
+  - **Auth**: Bearer token required via `requireAdmin` middleware
+  - **Request**: Zod validated: `{ status: "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED", note?: string, restock?: boolean, trackingNumber?: string, carrier?: string, shipDate?: string, cancellationReason?: string }`
+  - **Response 200**: `{ id: string, status: string, updatedAt: string }`
+  - **Errors**:
+    - 400: Invalid status transition or validation failed
+    - 401: Unauthorized
+    - 404: Order not found
+    - 409: Conflict (concurrent update detected)
+    - 500: Server error
+  - **Allowed State Transitions**:
+    - `PENDING` → `PROCESSING`
+    - `PROCESSING` → `SHIPPED`
+    - `SHIPPED` → `DELIVERED`
+    - `PENDING` or `PROCESSING` → `CANCELLED` (with optional inventory restock)
+    - Backward transitions disallowed (e.g., `DELIVERED` → `SHIPPED`) unless admin override flag set
+  - **Implementation**:
+    - Validates status transition rules
+    - For `CANCELLED` with `restock=true`: atomically increments inventory for each order item within transaction
+    - Creates `OrderActivity` audit log entry: `{ adminId, orderId, fromStatus, toStatus, note, timestamp }`
+    - Supports `Idempotency-Key` header to prevent double execution
+    - Handles concurrent updates with database locking (returns 409 on conflict)
+    - Optional side effects: email notifications to buyer (configurable), webhook triggers
+  - **Business Rules**:
+    - **Cancel Order**: Only allowed for `PENDING` or `PROCESSING` status (configurable to allow later cancels with override)
+    - **Inventory Restock**: When order cancelled with `restock=true`, increments `product.inventory` by order quantities
+    - **Restock Idempotency**: Prevents duplicate restocking if called multiple times
+    - **Audit Trail**: All status changes logged with admin ID, timestamps, and optional notes
+    - **Email Triggers**: `SHIPPED` and `DELIVERED` optionally send customer emails with tracking info
+
+- `GET /api/admin/orders/:id/activities` ([admin/orders/[id]/activities.ts](apps/backend/pages/api/admin/orders/[id]/activities.ts))
+  - **Auth**: Required
+  - **Response 200**: `[{ id, adminId, orderId, fromStatus, toStatus, note, timestamp, admin: { username } }]`
+  - **Errors**: 401, 404, 500
+  - **Implementation**: Returns chronological list of order status changes with admin attribution
+
+**Order Action Buttons Specification (Admin UI)**:
+
+Context: Action buttons displayed on order detail page `/admin/orders/[id]` for authenticated admins. Current order status values: `PENDING`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`.
+
+**Button: Mark Processing**
+- **Label**: "Mark Processing"
+- **Visibility**: Show when `status === "PENDING"`
+- **Preconditions**: Order exists; admin authenticated
+- **UX Flow**:
+  - On click: Set button to loading state, optimistically update status badge to "Processing"
+  - No confirmation dialog (low-risk operation)
+  - On success: Show success toast "Order marked Processing", emit analytics event `order_status_changed`
+  - On failure: Revert optimistic UI, show error toast with retry option
+- **API Call**: `PUT /api/admin/orders/:id/status` with body `{ "status": "PROCESSING" }`
+- **Analytics**: Fire event with `{ orderId, from: "PENDING", to: "PROCESSING", adminId }`
+
+**Button: Mark Shipped**
+- **Label**: "Mark Shipped"
+- **Visibility**: Show when `status === "PROCESSING"`
+- **Preconditions**: Order in processing state
+- **UX Flow**:
+  - On click: Open modal to capture optional fields: `trackingNumber`, `carrier`, `shipDate` (default: now)
+  - Modal has "Confirm" and "Cancel" buttons
+  - After confirm: Show loading, optimistically set status to "Shipped"
+  - On success: Show toast, trigger optional email to buyer with tracking info
+  - On failure: Revert optimistic UI, show error with retry
+- **API Call**: `PUT /api/admin/orders/:id/status` with body `{ "status": "SHIPPED", "note": "<tracking/carrier JSON>", "trackingNumber": "...", "carrier": "...", "shipDate": "..." }`
+- **Side Effects**: Optional automated email to `buyerEmail` with tracking information
+
+**Button: Mark Delivered**
+- **Label**: "Mark Delivered"
+- **Visibility**: Show when `status === "SHIPPED"`
+- **Preconditions**: Order must be shipped
+- **UX Flow**:
+  - On click: Show confirmation modal "Confirm mark order as Delivered?" with optional delivery date
+  - On confirm: Optimistically set status to "Delivered", disable other action buttons
+  - On success: Persist state, show success badge, optionally archive/log for analytics
+  - On failure: Revert and show error
+- **API Call**: `PUT /api/admin/orders/:id/status` with body `{ "status": "DELIVERED" }`
+- **Finality**: Order reaches terminal state; no further status changes allowed (except admin override)
+
+**Button: Cancel Order**
+- **Label**: "Cancel Order" (destructive action, red styling)
+- **Visibility**: Show when `status === "PENDING"` or `status === "PROCESSING"` (configurable)
+- **Preconditions**: Admin permission; order not yet shipped/delivered
+- **UX Flow**:
+  - On click: Show strong confirmation modal with:
+    - Title: "Cancel Order?"
+    - Body: "This will set order to Cancelled and optionally restock items. This action cannot be undone."
+    - Checkbox: "Also restock inventory to products" (if `RESTOCK_ON_CANCEL` not enforced server-side)
+    - Text area: Optional `cancellationReason` input
+    - Buttons: "Confirm Cancel" (red/destructive), "Keep Order" (cancel action)
+  - On confirm: Call API with `restock` flag and reason
+  - On success: Show toast "Order cancelled — inventory restocked" (if restocked), update order badge to "Cancelled"
+  - On failure: Show error dialog; if inventory restock fails, leave order state unchanged and show descriptive error
+- **API Call**: `PUT /api/admin/orders/:id/status` with body `{ "status": "CANCELLED", "restock": true|false, "cancellationReason": "..." }`
+- **Server Behavior**:
+  - If `restock===true` or global `RESTOCK_ON_CANCEL` flag: increment `product.inventory` for each order item atomically in same transaction
+  - Create audit record: who cancelled, when, reason
+  - Future: Trigger refund logic if payment integration exists
+- **Audit Trail**: Records admin ID, timestamp, cancellation reason in `OrderActivity`
+
+**Button: Print Order**
+- **Label**: "Print Order"
+- **Visibility**: Always visible to admin
+- **Action**: Client-side print view (open new window with printable HTML) or call `GET /api/admin/orders/:id/print` to generate PDF
+- **Implementation**: If server PDF: stream `application/pdf` and open in new tab
+- **No Status Change**: Read-only operation
+- **Accessibility**: Printable template uses semantic HTML and CSS print media queries
+
+**Optimistic UI & Concurrency Handling**:
+- Always use optimistic updates for responsive UX
+- Disable other action buttons while API call pending
+- Use server response to reconcile state; on mismatch show toast "State changed on server: <serverStatus>"
+- Include `Idempotency-Key: <uuid>` header for destructive actions to prevent double execution
+- Handle 409 conflict by refetching order and showing banner: "This order changed since you opened it. Please review."
+- Lock buttons during concurrent operations to prevent race conditions
+
+**Permissions & Auditing**:
+- Only allow actions if `req.adminId` present and admin has `role: admin` (future roles: `manager`, `viewer`)
+- Server creates `OrderActivity` log entry for each status change:
+  - Schema: `{ id, adminId, orderId, fromStatus, toStatus, note, timestamp, admin: { username } }`
+- Expose history via `GET /api/admin/orders/:id/activities` endpoint
+- Admin UI displays activity timeline below order details
+
+**Notifications & Side Effects**:
+- On `SHIPPED`: Optional email to buyer with subject "Your order has shipped" and tracking link
+- On `DELIVERED`: Optional email with "Your order has been delivered"
+- On `CANCELLED`: Optional email with cancellation reason and refund information (if applicable)
+- Configurable webhook triggers for external systems (inventory management, analytics)
+- Environment variables: `ENABLE_ORDER_EMAILS`, `SMTP_CONFIG`, `WEBHOOK_URL`
+
+**Edge Cases & Error Handling**:
+- **Cancel After Shipped**: Blocked by default; require explicit admin override (checkbox "Force cancel shipped order") with audit log entry
+- **Inventory Restock Idempotency**: Track restock operations to prevent duplicate inventory increments if API called multiple times
+- **Concurrent Admin Actions**: Database transaction serialization prevents conflicting updates; return 409 with clear message
+- **Partial Failures**: If restock partially succeeds (some products updated, others fail), rollback entire transaction
+- **Deleted Products**: If product deleted after order placed, skip inventory restock for that item (log warning)
+
+**Data Model Extensions** (future implementation):
+
+```prisma
+model OrderActivity {
+  id          String   @id @default(cuid())
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId     String
+  admin       AdminUser @relation(fields: [adminId], references: [id])
+  adminId     String
+  fromStatus  String
+  toStatus    String
+  note        String?
+  timestamp   DateTime @default(now())
+
+  @@index([orderId])
+  @@index([timestamp])
+  @@map("order_activities")
+}
+
+model Order {
+  // ... existing fields ...
+  activities  OrderActivity[]
+  trackingNumber String?
+  carrier        String?
+  shipDate       DateTime?
+  deliveryDate   DateTime?
+  cancellationReason String?
+}
+```
+
+**Test Coverage Requirements**:
+
+**Unit Tests** (Server):
+- `updateOrderStatus` function enforces allowed transitions (PENDING→PROCESSING valid, DELIVERED→SHIPPED invalid)
+- Inventory restock logic correctly increments quantities
+- Idempotency: calling restock twice doesn't double inventory
+- Audit log entries created for each status change
+- Concurrent update detection returns 409
+
+**Integration API Tests**:
+- Happy path: `PENDING → PROCESSING → SHIPPED → DELIVERED`
+- Cancel with restock: `PENDING → CANCELLED` (verify inventory increases in DB)
+- Cancel without restock: inventory unchanged
+- Conflict: two concurrent PUTs to different statuses → one succeeds (200), other returns 409
+- Invalid transition: `DELIVERED → PROCESSING` returns 400 with error message
+- Unauthorized: missing JWT returns 401
+
+**E2E Tests** (Playwright):
+- Admin logs in, navigates to order detail
+- Clicks "Mark Shipped" button, modal opens
+- Enters tracking number "1234567890", carrier "USPS"
+- Confirms, sees success toast
+- Verifies status badge updates to "Shipped"
+- Verifies email stub called (if email service mocked)
+- Clicks "Cancel Order", sees confirmation dialog
+- Checks "Also restock inventory" checkbox
+- Enters cancellation reason "Customer requested"
+- Confirms, sees success toast "Order cancelled — inventory restocked"
+- Verifies order status badge shows "Cancelled"
+- Queries database to confirm inventory incremented
+
+**Accessibility Requirements**:
+- All action buttons have descriptive `aria-label`: e.g., `aria-label="Mark order cmkp9nna as shipped"`
+- Confirmation modals use focus trap (Esc to close, Tab navigation)
+- After modal close, focus returns to trigger button
+- Loading states announced to screen readers: `aria-busy="true"` and `aria-live="polite"` for status updates
+- Error messages have `role="alert"` for immediate screen reader announcement
+- Keyboard navigation: all buttons accessible via Tab, activated with Enter/Space
+
+**UI Copy & Microcopy**:
+- **Success Toasts**: Short + actionable. Example: "Order marked Shipped ✓ [View Order]"
+- **Error Messages**: Human-readable with suggested action. Example: "Failed to update order status. This order may have been updated by another admin. [Refresh Page] [Retry]"
+- **Confirmation Dialogs**: Explicit consequences. Example for Cancel: "This will cancel the order and return 2 items (×1 Áo thun trắng, ×1 Quần jean) to inventory. The customer will be notified. This action cannot be undone."
+
+**Analytics Events**:
+- Event name: `order_status_changed`
+- Payload: `{ orderId: string, fromStatus: string, toStatus: string, adminId: string, timestamp: number, restockApplied?: boolean }`
+- Track button clicks even if API fails: `order_status_change_attempted` with `{ error: string }`
+
+**Performance Considerations**:
+- Inventory updates in single transaction with order status change (atomic operation)
+- Use database indexes on `orders.status` and `order_activities.orderId` for fast queries
+- Cache admin user data (username) in `OrderActivity` to avoid N+1 queries when displaying history
+- Debounce rapid button clicks (500ms) to prevent accidental double-submission
+- Optimistic UI updates keep perceived latency <100ms
+
 **Category Management (Admin)**:
 
 - `GET /api/admin/categories` ([admin/categories/index.ts](apps/backend/pages/api/admin/categories/index.ts))
@@ -289,7 +512,7 @@ Response (failure due to stock): status 400
 
 3) Data Models & DB Schema
 
-**Database**: SQLite for development (file: `dev.db`), PostgreSQL recommended for production. Configured via `DATABASE_URL` environment variable.
+**Database**: PostgreSQL for both development and production. Configured via `DATABASE_URL` environment variable.
 
 **Prisma Schema** ([apps/backend/prisma/schema.postgres.prisma](apps/backend/prisma/schema.postgres.prisma)):
 
@@ -317,10 +540,10 @@ model Product {
   name        String
   slug        String   @unique
   description String?
-  price       Float    // Note: Decimal not supported in SQLite, using Float
+  price       Float
   inventory   Int      @default(0)
   published   Boolean  @default(false)
-  images      String   @default("[]")  // JSON string array, not native array (SQLite limitation)
+  images      String   @default("[]")  // JSON string array for image URLs
   category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   categoryId  String
   createdAt   DateTime @default(now())
@@ -370,8 +593,8 @@ model AdminUser {
 ```
 
 **Key Schema Decisions**:
-- **Images as JSON String**: SQLite doesn't support array types natively. Images stored as JSON string (e.g., `"[]"` or `"[\"url1\",\"url2\"]"`) and parsed to arrays in API layer. For PostgreSQL migration, change to `String[]`.
-- **Float vs Decimal**: SQLite limitation - using Float for prices. May cause precision issues with large sums (acceptable for MVP). PostgreSQL should use `Decimal @db.Decimal(10,2)`.
+- **Images as JSON String**: Images stored as JSON string (e.g., `"[]"` or `"[\"url1\",\"url2\"]"`) and parsed to arrays in API layer. Kept as string for compatibility.
+- **Float for Prices**: Using Float for prices (acceptable precision for e-commerce MVP). For financial applications requiring exact decimal precision, consider Decimal type.
 - **Cascade Deletes**: Category deletion cascades to products. Order deletion cascades to OrderItems. Product deletion does NOT cascade to OrderItems (orders preserve snapshot).
 - **OrderItem Snapshots**: productId, name, price stored as snapshots at purchase time. If product is later deleted/updated, order history remains intact.
 - **Indexes**: Strategic indexes on frequently queried fields (categoryId, published, slug, status, createdAt, orderId) to optimize common queries.
@@ -751,7 +974,7 @@ yarn install
 
 # 3. Configure environment variables
 # Create apps/backend/.env:
-echo 'DATABASE_URL="file:../../dev.db"' > apps/backend/.env
+echo 'DATABASE_URL="postgresql://postgres:postgres@localhost:5432/storefront_dev?schema=public"' > apps/backend/.env
 echo 'JWT_SECRET="your-secret-key-change-in-production"' >> apps/backend/.env
 
 # Create apps/frontend/.env.local:
@@ -801,7 +1024,7 @@ yarn seed          # Re-seed database (wipes existing data)
 
 **Backend** (apps/backend/.env):
 ```env
-DATABASE_URL="file:../../dev.db"          # SQLite for dev, postgres:// for prod
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/storefront_dev?schema=public"
 JWT_SECRET="your-secret-key-change-in-production"  # CRITICAL: Change in production
 NODE_ENV="development"                     # Optional, auto-detected by Next.js
 ```
@@ -842,7 +1065,7 @@ yarn start:frontend  # Port 3000
 1. **"Prisma Client not found"**: Run `yarn prisma:generate`
 2. **Port 3000/3001 already in use**: Kill existing processes with `lsof -ti:3000 | xargs kill` (macOS/Linux)
 3. **Module resolution errors**: Delete `node_modules` and `.next` folders, run `yarn install` again
-4. **Database locked (SQLite)**: Close Prisma Studio or other DB connections
+4. **PostgreSQL connection issues**: Ensure Docker container is running with `docker ps | grep postgres`
 5. **Workspace dependency issues**: Run `yarn install --force` to rebuild symlinks
 6. **CI/CD uses npm**: `.github/workflows/ci.yml` currently has `npm ci` commands - should be changed to `yarn install --frozen-lockfile` (known issue)
 
@@ -902,9 +1125,10 @@ yarn start:frontend  # Port 3000
   6. User B receives "Insufficient inventory" error
 - **Result**: No overselling, clear error feedback
 
-**Limitations**:
-- **SQLite Concurrency**: Supports only one write transaction at a time - multiple concurrent checkouts serialize automatically (acceptable for MVP)
-- **PostgreSQL**: Better concurrency with MVCC (Multi-Version Concurrency Control)
+**Database Concurrency**:
+- **PostgreSQL MVCC**: Uses Multi-Version Concurrency Control for excellent concurrent transaction handling
+- **Transaction Isolation**: Serializable isolation level prevents race conditions during inventory updates
+- **FOR UPDATE Locks**: Critical inventory checks use row-level locks to prevent conflicts
 
 **Scalability Bottlenecks & Recommendations**:
 

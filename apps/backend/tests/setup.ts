@@ -2,9 +2,8 @@ import { beforeAll, afterAll, afterEach } from 'vitest';
 import path from 'path';
 
 // Mock environment variables for testing
-// Use SQLite for tests (same as dev environment)
-const testDbPath = path.resolve(__dirname, '../test.db');
-process.env.DATABASE_URL = process.env.DATABASE_URL || `file:${testDbPath}`;
+// Use PostgreSQL test database (separate from dev)
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/storefront_test?schema=public';
 process.env.JWT_SECRET = 'test-secret-key-for-testing-only';
 (process.env as any).NODE_ENV = 'test';
 

@@ -4,7 +4,7 @@
 
 **Monorepo Structure**: Yarn workspaces with `apps/frontend` (Next.js 14 Pages Router) and `apps/backend` (Next.js 14 API Routes). Shared `prisma/` at root for database schema and migrations.
 
-**Data Flow**: Frontend (port 3000) → API calls via `lib/api.ts` → Backend API Routes (port 3001) → Prisma ORM → SQLite/PostgreSQL. State managed by Zustand (`store/cartStore.ts`) with localStorage persistence.
+**Data Flow**: Frontend (port 3000) → API calls via `lib/api.ts` → Backend API Routes (port 3001) → Prisma ORM → PostgreSQL. State managed by Zustand (`store/cartStore.ts`) with localStorage persistence.
 
 **Authentication**: JWT-based admin auth. Backend `lib/auth.ts` exports `requireAdmin()` HOF that wraps protected API routes. Token stored in localStorage/cookies on frontend, sent as `Authorization: Bearer <token>`.
 

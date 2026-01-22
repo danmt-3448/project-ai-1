@@ -9,12 +9,19 @@ A minimal online store built with Next.js, TypeScript, and PostgreSQL.
 - 💳 Simulated checkout flow
 - 👨‍💼 Admin panel for inventory management
 - 🔐 JWT-based authentication for admin
+- 📦 **Order Status Management** (Sprint 6):
+  - Track order lifecycle: PENDING → PROCESSING → SHIPPED → DELIVERED
+  - Cancel orders with automatic inventory restock
+  - Complete audit trail with admin attribution
+  - Shipping tracking (carrier, tracking number, dates)
+  - Optimistic concurrency control to prevent conflicts
+  - Idempotency support for safe retries
 
 ## Tech Stack
 
 - **Frontend:** Next.js 14 (Pages Router), React, TypeScript, Tailwind CSS, Zustand
 - **Backend:** Next.js 14 API Routes, Prisma ORM
-- **Database:** PostgreSQL (production), SQLite (dev optional)
+- **Database:** PostgreSQL (production)
 - **Deployment:** Vercel
 - **Testing:** Vitest (unit/integration), Playwright (E2E)
 

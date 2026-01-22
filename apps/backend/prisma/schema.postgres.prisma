@@ -38,14 +38,23 @@ model Product {
 }
 
 model Order {
-  id         String      @id @default(cuid())
-  buyerName  String
-  buyerEmail String
-  address    String
-  total      Float
-  status     String      @default("CONFIRMED") // CONFIRMED, FAILED, CANCELLED
-  items      OrderItem[]
-  createdAt  DateTime    @default(now())
+  id                 String          @id @default(cuid())
+  buyerName          String
+  buyerEmail         String
+  address            String
+  total              Float
+  status             String          @default("PENDING") // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED, CONFIRMED, FAILED
+  items              OrderItem[]
+  activities         OrderActivity[]
+  // Shipping tracking fields
+  trackingNumber     String?
+  carrier            String?
+  shipDate           DateTime?
+  deliveryDate       DateTime?
+  // Cancellation tracking
+  cancellationReason String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @default(now()) @updatedAt
 
   @@index([status])
   @@index([createdAt])
@@ -65,10 +74,27 @@ model OrderItem {
   @@map("order_items")
 }
 
+model OrderActivity {
+  id         String    @id @default(cuid())
+  order      Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId    String
+  admin      AdminUser @relation(fields: [adminId], references: [id])
+  adminId    String
+  fromStatus String
+  toStatus   String
+  note       String?
+  timestamp  DateTime  @default(now())
+
+  @@index([orderId])
+  @@index([timestamp])
+  @@map("order_activities")
+}
+
 model AdminUser {
-  id       String @id @default(cuid())
-  username String @unique
-  password String // bcrypt hashed
+  id         String          @id @default(cuid())
+  username   String          @unique
+  password   String // bcrypt hashed
+  activities OrderActivity[]
 
   @@map("admin_users")
 }

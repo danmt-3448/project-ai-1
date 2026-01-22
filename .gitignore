@@ -47,6 +47,8 @@ next-env.d.ts
 # Prisma
 prisma/migrations/*
 !prisma/migrations/.gitkeep
+*.db
+*.db-journal
 
 # Docker
 .dockerignore
