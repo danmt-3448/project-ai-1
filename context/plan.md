@@ -350,6 +350,355 @@ Notes:
 
 ---
 
+### Sprint 7: Analytics & Inventory Management Dashboard (2-3 weeks) — NEW
+
+**Goal:** Implement comprehensive analytics and inventory management system for admin dashboard with revenue tracking, inventory insights, and low stock alerts.
+
+**Status:** ✅ Specs completed, ✅ Schema updated, ✅ Migration applied, 🔄 Implementation pending
+
+---
+
+#### **Backend API (Priority: High)**
+
+**Database Schema Updates:**
+- ✅ **BE-25:** Add performance indexes to Prisma schema (COMPLETED)
+  - `products(categoryId, published)` for inventory queries
+  - `products(inventory)` for low stock queries  
+  - `orders(createdAt, status)` for revenue analytics
+  - `order_items(productId)` for product revenue aggregation
+- ✅ **BE-26:** Generate and apply migration `add_analytics_indexes` (COMPLETED)
+
+**Analytics API Endpoints:**
+- [ ] **BE-27:** Implement `GET /api/admin/analytics/dashboard`
+  - Aggregate dashboard summary statistics
+  - Products: total, published, unpublished counts
+  - Inventory: total units, by category, low stock alerts (inventory <= 5)
+  - Revenue: total, average order value, monthly trends (last 12 months)
+  - Top products by revenue (top 10)
+  - Orders: status breakdown (confirmed, processing, shipped, delivered, cancelled, failed)
+  - Date range filtering (default: last 30 days)
+  - Parallel query execution for performance
+  - PostgreSQL aggregations with `$queryRaw` for complex queries
+  
+- [ ] **BE-28:** Implement `GET /api/admin/analytics/revenue`
+  - Support 4 groupBy modes: `order`, `product`, `month`, `category`
+  - **groupBy=order**: Individual order revenue with pagination
+  - **groupBy=product**: Revenue per product with units sold, order count
+  - **groupBy=month**: Monthly revenue aggregation with ORDER BY month DESC
+  - **groupBy=category**: Revenue per category with product count
+  - Query params: `startDate`, `endDate`, `limit`, `offset`, `sortBy`, `sortOrder`
+  - Filter only confirmed orders (CONFIRMED, PROCESSING, SHIPPED, DELIVERED)
+  - Return summary totals with paginated data
+  - Zod validation for query parameters
+  
+- [ ] **BE-29:** Implement `GET /api/admin/analytics/inventory`
+  - Support 3 groupBy modes: `category`, `product`, `status`
+  - **groupBy=category**: Total units per category, product counts, low stock count
+  - **groupBy=product**: Product-level inventory with low stock flags
+  - **groupBy=status**: Aggregate by published/unpublished status
+  - Query params: `lowStockThreshold` (default: 5), `includeUnpublished` (default: false)
+  - Sort products by inventory ASC for low stock visibility
+  
+- [ ] **BE-30:** Add error handling and validation
+  - Validate date formats (ISO 8601)
+  - Validate groupBy enum values
+  - Handle invalid query parameters (400 errors)
+  - Database query timeout handling (10s limit)
+  - Log slow queries (>100ms) for monitoring
+
+**Testing:**
+- [ ] **TEST-14:** Unit tests for analytics aggregation functions
+  - Test revenue calculation accuracy
+  - Test inventory aggregation by category
+  - Test low stock filtering logic
+  - Test date range filtering
+  - Mock Prisma client with test data
+  
+- [ ] **TEST-15:** Integration API tests for analytics endpoints
+  - Test dashboard endpoint returns all expected fields
+  - Test revenue endpoint with each groupBy mode
+  - Test inventory endpoint with each groupBy mode
+  - Test pagination and sorting
+  - Test date range filters (edge cases: same day, future dates)
+  - Test with empty database (zero orders/products)
+  
+- [ ] **TEST-16:** Performance tests
+  - Benchmark dashboard query with 1000+ orders
+  - Verify query execution time < 500ms for typical dataset
+  - Test concurrent requests (10 simultaneous dashboard calls)
+
+---
+
+#### **Frontend Admin Dashboard (Priority: High)**
+
+**Dashboard Page Enhancement:**
+- [ ] **FE-33:** Update `/admin/dashboard` page structure
+  - Replace existing basic dashboard with comprehensive analytics UI
+  - Implement date range selector (Last 7/30 days, This Month, Last Month, Custom)
+  - Add loading states with skeleton screens
+  - Error boundary with retry functionality
+  
+- [ ] **FE-34:** Implement Stats Cards Grid (4 cards)
+  - **Card 1: Total Products** - Show published/unpublished split
+  - **Card 2: Total Inventory** - Show total units + low stock alert badge
+  - **Card 3: Total Orders** - Show total + confirmed count
+  - **Card 4: Revenue** - Show total revenue + average order value (VND format)
+  - Color-coded with emoji icons (📦, 📊, 🛍️, 💰)
+  - Responsive grid layout (1 col mobile, 2 col tablet, 4 col desktop)
+  
+- [ ] **FE-35:** Implement Inventory by Category Table
+  - Columns: Category Name, Total Units, Product Count, Low Stock Count
+  - Sortable columns (click header to sort)
+  - Click row to drill down to product list for that category
+  - Highlight low stock categories (badge with count)
+  
+- [ ] **FE-36:** Implement Low Stock Alert Section
+  - Red-themed alert box with warning icon ⚠️
+  - Table: Product Name, Category, Current Stock
+  - Sort by inventory ASC (lowest first)
+  - Quick action: "Edit" button → navigate to edit product page
+  - Conditional rendering (only show if low stock items exist)
+  
+- [ ] **FE-37:** Implement Top Products by Revenue Table
+  - Columns: Product Name, Revenue (VND format), Units Sold, Order Count
+  - Top 10 products by default
+  - Vietnamese currency formatting with `toLocaleString('vi-VN')`
+  - Click product name → navigate to product edit page
+  
+- [ ] **FE-38:** Implement Monthly Revenue Table/Chart
+  - Table with columns: Month, Revenue (VND), Orders, Avg Order Value
+  - Last 6 months by default
+  - Optional: Line/bar chart visualization (if time permits)
+  - Fallback: Clean HTML table if chart library not added
+  
+- [ ] **FE-39:** Implement data fetching with SWR
+  - Fetch `/api/admin/analytics/dashboard` on mount
+  - Revalidate on window focus
+  - Handle loading and error states
+  - Cache with 5-minute TTL
+  - Manual refresh button to refetch
+
+**Advanced Features (Optional):**
+- [ ] **FE-40:** Add date range picker component
+  - Presets: Last 7 days, Last 30 days, This Month, Last Month
+  - Custom date range with calendar picker
+  - Update URL query params for shareable links
+  
+- [ ] **FE-41:** Create `/admin/analytics` navigation section
+  - Submenu: Dashboard, Revenue, Inventory
+  - Separate pages for detailed analytics (future sprint)
+
+**UI/UX Polish:**
+- [ ] **FE-42:** Add responsive design for mobile/tablet
+  - Collapsible sections on mobile
+  - Horizontal scroll for wide tables
+  - Touch-friendly buttons and controls
+  
+- [ ] **FE-43:** Add loading skeletons
+  - Skeleton for stat cards (shimmer effect)
+  - Skeleton for tables
+  - Smooth transitions between loading and loaded states
+  
+- [ ] **FE-44:** Implement error states with actionable feedback
+  - Network error → "Retry" button with icon
+  - Empty state → "No data available for selected date range"
+  - Permission error → Redirect to login
+
+---
+
+#### **Documentation**
+
+- ✅ **DOC-05:** Update `context/specs.md` with analytics specifications (COMPLETED)
+- ✅ **DOC-06:** Create `ANALYTICS_IMPLEMENTATION.md` implementation guide (COMPLETED)
+- [ ] **DOC-07:** Update `API_TESTING.md` with new analytics endpoints
+  - Add curl examples for dashboard, revenue, inventory endpoints
+  - Document query parameters and response formats
+  - Add example responses with sample data
+- [ ] **DOC-08:** Update `README.md` with analytics feature description
+  - Add "Analytics Dashboard" section
+  - Mention key metrics available to admin
+  - Add screenshot (optional)
+- [ ] **DOC-09:** Add inline code comments for complex aggregations
+  - Document PostgreSQL-specific `$queryRaw` usage
+  - Explain revenue calculation business logic
+  - Comment inventory aggregation queries
+
+---
+
+### **Acceptance Criteria:**
+
+**Must Have (MVP):**
+- ✅ Admin dashboard displays total products split by published/unpublished
+- ✅ Admin can view total inventory units across all products
+- ✅ Admin can view inventory breakdown by category
+- ✅ Admin receives low stock alerts for products with inventory <= 5
+- ✅ Admin can view total revenue for date range (default: last 30 days)
+- ✅ Admin can view revenue trends by month (last 12 months)
+- ✅ Admin can view top 10 products by revenue
+- ✅ Admin can view order count breakdown by status
+- ✅ Dashboard loads in < 2 seconds with typical dataset
+- ✅ All queries use database indexes for performance
+- ✅ API returns 401 for unauthenticated requests
+- ✅ API validates inputs and returns 400 for invalid data
+
+**Should Have:**
+- ⚪ Monthly revenue displayed as visual chart (line or bar)
+- ⚪ Low stock products highlighted with red alert box
+- ⚪ Click category row to drill down to product list
+- ⚪ Currency formatted in VND (₫) with thousand separators
+- ⚪ Loading states with skeleton screens
+- ⚪ Error states with retry functionality
+- ⚪ Date range selector with presets
+
+**Could Have (Future):**
+- ⚪ Separate analytics pages for deep-dive
+- ⚪ Export to CSV/Excel
+- ⚪ Interactive charts with zoom/pan
+- ⚪ Real-time updates with WebSocket
+- ⚪ Period comparison (current vs previous)
+- ⚪ Predictive analytics (forecast inventory)
+
+---
+
+### **Dependencies:**
+
+**Required:**
+- ✅ Admin authentication (JWT) — Available
+- ✅ Order and Product models — Available
+- ✅ PostgreSQL + Prisma — Available
+- ✅ Performance indexes migration — Completed
+
+**Optional:**
+- ⚪ Chart library (recharts/nivo) — TBD
+- ⚪ CSV export library — TBD
+- ⚪ Date picker library — TBD
+
+---
+
+### **Risks & Mitigation:**
+
+| Risk | Impact | Probability | Mitigation |
+|------|--------|-------------|------------|
+| Complex queries cause slow performance | High | Medium | Use indexes, caching (5-min), 10s timeout |
+| Large datasets crash dashboard | High | Low | Pagination (max 500), lazy loading |
+| Concurrent requests overload DB | Medium | Low | Connection pooling, rate limiting |
+| Chart library increases bundle size | Low | Medium | Dynamic imports, lightweight alternatives |
+| Timezone edge cases in date calcs | Medium | Medium | Use UTC consistently, document handling |
+| Admin misinterprets metrics | Low | High | Add tooltips, document calculations |
+
+---
+
+### **Estimated Effort:**
+
+**Backend:** 9 days
+- Dashboard API: 2 days
+- Revenue API: 2 days
+- Inventory API: 1.5 days
+- Validation: 0.5 day
+- Unit tests: 1.5 days
+- Integration tests: 1 day
+- ✅ Schema/migration: 0.5 day (done)
+
+**Frontend:** 11 days
+- Page structure: 1 day
+- Stats cards: 0.5 day
+- Tables: 2.5 days
+- Charts: 1.5 days
+- Data fetching: 0.5 day
+- Responsive: 1 day
+- Loading/errors: 0.5 day
+- Component tests: 1.5 days
+- E2E tests: 1 day
+- Polish: 1 day
+
+**Documentation:** 0.75 day
+- ✅ Specs: 0.5 day (done)
+- ✅ Implementation guide: 0.5 day (done)
+- API testing docs: 0.5 day
+- README: 0.25 day
+
+**Buffer:** 2 days
+
+**Total: ~22.75 days (~4.5 weeks solo, ~2.5 weeks with 2 devs)**
+
+---
+
+### **Implementation Phases:**
+
+**Phase 1: Backend Foundation (Days 1-5)**
+1. Implement dashboard endpoint with all aggregations
+2. Implement revenue endpoint (4 groupBy modes)
+3. Implement inventory endpoint (3 groupBy modes)
+4. Add validation and error handling
+5. Write unit and integration tests
+
+**Phase 2: Frontend Core (Days 6-11)**
+1. Update dashboard page structure
+2. Build stats cards grid
+3. Build inventory and top products tables
+4. Add low stock alert section
+5. Integrate SWR for data fetching
+6. Add monthly revenue table
+
+**Phase 3: Polish & Advanced (Days 12-16)**
+1. Add charts for revenue visualization (optional)
+2. Implement date range selector
+3. Responsive design and mobile optimization
+4. Loading skeletons and error states
+5. UI polish and animations
+
+**Phase 4: Testing & Docs (Days 17-20)**
+1. Component tests for dashboard sections
+2. E2E tests with Playwright
+3. Performance testing and optimization
+4. Update API testing docs
+5. Update README
+
+**Phase 5: Review & Launch (Days 21-23)**
+1. Code review and refactoring
+2. QA testing with real data
+3. Deploy to production
+4. Monitor performance and errors
+5. Gather admin feedback
+
+---
+
+### **Success Metrics:**
+
+**Performance:**
+- Dashboard loads < 2s (p95)
+- API response < 500ms (p95)
+- Zero N+1 queries
+
+**Quality:**
+- Test coverage ≥ 80% for analytics
+- Zero critical bugs after 1 week
+- WCAG 2.1 AA compliance
+
+**Business:**
+- Admin uses dashboard 3x+ per week
+- Low stock alerts prevent stockouts
+- Revenue insights inform decisions
+
+---
+
+### **Next Steps After Sprint 7:**
+
+**Future Enhancements:**
+1. **Advanced Analytics:** Customer segmentation, product trends, predictive analytics
+2. **Inventory Automation:** Auto-reorder points, email notifications, CSV import/export
+3. **Revenue Optimization:** Profit margins, discounts, abandoned cart, conversion funnel
+
+---
+
+**Questions for Team:**
+1. Start with simple tables or add chart library now?
+2. Include CSV export in this sprint or defer?
+3. Priority: comprehensive analytics or faster delivery with basics?
+4. Acceptable: 5-minute cache or need real-time?
+
+---
+
 ## 3. Backlog theo tính năng (Feature Backlog)
 
 ### 3.1 Database & Backend Foundation

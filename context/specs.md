@@ -469,6 +469,307 @@ model Order {
     - Deletes category with `prisma.category.delete()` only if no products exist
     - **Note**: Schema has `onDelete: Cascade` for Product → Category relation, but we prevent cascading deletes at API level to avoid accidental data loss
 
+**Analytics & Reporting (Admin)**:
+
+**Admin Dashboard Enhancement — Inventory & Revenue Analytics**
+
+- `GET /api/admin/analytics/dashboard` ([admin/analytics/dashboard.ts](apps/backend/pages/api/admin/analytics/dashboard.ts))
+  - **Auth**: Bearer token required
+  - **Query Params**: 
+    - `startDate?: string` (ISO 8601 format, default: 30 days ago)
+    - `endDate?: string` (ISO 8601 format, default: now)
+  - **Response 200**:
+    ```json
+    {
+      "products": {
+        "total": 150,
+        "published": 120,
+        "unpublished": 30
+      },
+      "inventory": {
+        "totalUnits": 1250,
+        "byCategory": [
+          { "categoryId": "c1", "categoryName": "Áo", "categorySlug": "ao", "totalUnits": 450, "productCount": 45 },
+          { "categoryId": "c2", "categoryName": "Quần", "categorySlug": "quan", "totalUnits": 600, "productCount": 50 },
+          { "categoryId": "c3", "categoryName": "Phụ kiện", "categorySlug": "phu-kien", "totalUnits": 200, "productCount": 25 }
+        ],
+        "lowStock": [
+          { "productId": "p1", "name": "Áo thun trắng", "slug": "ao-thun-trang", "inventory": 2, "categoryName": "Áo" }
+        ]
+      },
+      "revenue": {
+        "totalRevenue": 25000000,
+        "totalOrders": 180,
+        "averageOrderValue": 138888.89,
+        "byMonth": [
+          { "month": "2026-01", "revenue": 12500000, "orders": 95 },
+          { "month": "2025-12", "revenue": 12500000, "orders": 85 }
+        ],
+        "topProducts": [
+          { "productId": "p1", "name": "Áo thun trắng", "slug": "ao-thun-trang", "revenue": 4500000, "unitsSold": 30, "orderCount": 25 },
+          { "productId": "p2", "name": "Quần jean", "slug": "quan-jean", "revenue": 3500000, "unitsSold": 10, "orderCount": 10 }
+        ]
+      },
+      "orders": {
+        "total": 180,
+        "confirmed": 150,
+        "processing": 20,
+        "shipped": 8,
+        "delivered": 2,
+        "cancelled": 0,
+        "failed": 0
+      }
+    }
+    ```
+  - **Errors**: 401 (unauthorized), 400 (invalid date format), 500
+  - **Implementation Notes**:
+    - Product counts: Simple aggregation `prisma.product.count({ where: { published: true/false } })`
+    - Inventory by category: Aggregation with groupBy and sum
+    - Low stock threshold: Products with inventory <= 5 (configurable)
+    - Revenue by month: Group orders by `DATE_TRUNC('month', createdAt)` with SUM(total)
+    - Revenue per product: Join OrderItems with aggregation, sorted by revenue DESC
+    - Order status breakdown: `prisma.order.groupBy({ by: ['status'], _count: true })`
+    - Date filtering applied to all revenue/order queries
+    - Uses database aggregations for performance (avoid loading all records into memory)
+
+- `GET /api/admin/analytics/revenue` ([admin/analytics/revenue.ts](apps/backend/pages/api/admin/analytics/revenue.ts))
+  - **Auth**: Required
+  - **Query Params**:
+    - `groupBy: 'order' | 'product' | 'month' | 'category'` (required)
+    - `startDate?: string` (ISO 8601, default: 30 days ago)
+    - `endDate?: string` (ISO 8601, default: now)
+    - `limit?: number` (default: 50, max: 500, for product/order grouping)
+    - `offset?: number` (default: 0, for pagination)
+    - `sortBy?: 'revenue' | 'orders' | 'units'` (default: 'revenue')
+    - `sortOrder?: 'asc' | 'desc'` (default: 'desc')
+  - **Response 200 (groupBy=order)**:
+    ```json
+    {
+      "data": [
+        {
+          "orderId": "ord_abc123",
+          "buyerName": "Nguyen Van A",
+          "buyerEmail": "a@example.com",
+          "revenue": 850000,
+          "itemCount": 3,
+          "status": "DELIVERED",
+          "createdAt": "2026-01-20T10:30:00.000Z"
+        }
+      ],
+      "total": 180,
+      "page": 1,
+      "limit": 50,
+      "summary": {
+        "totalRevenue": 25000000,
+        "averageRevenue": 138888.89
+      }
+    }
+    ```
+  - **Response 200 (groupBy=product)**:
+    ```json
+    {
+      "data": [
+        {
+          "productId": "p1",
+          "productName": "Áo thun trắng",
+          "productSlug": "ao-thun-trang",
+          "categoryName": "Áo",
+          "revenue": 4500000,
+          "unitsSold": 30,
+          "orderCount": 25,
+          "averagePrice": 150000
+        }
+      ],
+      "total": 120,
+      "page": 1,
+      "limit": 50,
+      "summary": {
+        "totalRevenue": 25000000,
+        "totalUnitsSold": 500
+      }
+    }
+    ```
+  - **Response 200 (groupBy=month)**:
+    ```json
+    {
+      "data": [
+        {
+          "month": "2026-01",
+          "year": 2026,
+          "monthName": "January",
+          "revenue": 12500000,
+          "orderCount": 95,
+          "averageOrderValue": 131578.95
+        },
+        {
+          "month": "2025-12",
+          "year": 2025,
+          "monthName": "December",
+          "revenue": 12500000,
+          "orderCount": 85,
+          "averageOrderValue": 147058.82
+        }
+      ],
+      "total": 6,
+      "summary": {
+        "totalRevenue": 25000000,
+        "totalOrders": 180
+      }
+    }
+    ```
+  - **Response 200 (groupBy=category)**:
+    ```json
+    {
+      "data": [
+        {
+          "categoryId": "c1",
+          "categoryName": "Áo",
+          "categorySlug": "ao",
+          "revenue": 10000000,
+          "unitsSold": 200,
+          "orderCount": 100,
+          "productCount": 45
+        }
+      ],
+      "total": 3,
+      "summary": {
+        "totalRevenue": 25000000,
+        "totalUnitsSold": 500
+      }
+    }
+    ```
+  - **Errors**: 401, 400 (invalid groupBy or date), 500
+  - **Implementation Details**:
+    - **groupBy=order**: Direct query on Order table with date filtering, sorted by revenue
+    - **groupBy=product**: Aggregate OrderItems grouped by productId, join with Product and Category tables
+    - **groupBy=month**: PostgreSQL `DATE_TRUNC('month', createdAt)` aggregation
+    - **groupBy=category**: Aggregate OrderItems → Product → Category with revenue sum
+    - All queries filter by Order.status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED') to exclude cancelled/failed orders
+    - Use indexed fields (Order.createdAt, OrderItem.productId) for performance
+    - Pagination supported for order/product groupings (not for month/category due to small result sets)
+
+- `GET /api/admin/analytics/inventory` ([admin/analytics/inventory.ts](apps/backend/pages/api/admin/analytics/inventory.ts))
+  - **Auth**: Required
+  - **Query Params**:
+    - `groupBy?: 'category' | 'product' | 'status'` (default: 'category')
+    - `lowStockThreshold?: number` (default: 5, products with inventory <= threshold flagged)
+    - `includeUnpublished?: boolean` (default: false)
+  - **Response 200 (groupBy=category)**:
+    ```json
+    {
+      "data": [
+        {
+          "categoryId": "c1",
+          "categoryName": "Áo",
+          "categorySlug": "ao",
+          "totalUnits": 450,
+          "productCount": 45,
+          "publishedProducts": 40,
+          "unpublishedProducts": 5,
+          "averageInventoryPerProduct": 10,
+          "lowStockProducts": 8
+        }
+      ],
+      "summary": {
+        "totalUnits": 1250,
+        "totalProducts": 150,
+        "lowStockProducts": 25
+      }
+    }
+    ```
+  - **Response 200 (groupBy=product)**:
+    ```json
+    {
+      "data": [
+        {
+          "productId": "p1",
+          "productName": "Áo thun trắng",
+          "productSlug": "ao-thun-trang",
+          "categoryName": "Áo",
+          "inventory": 2,
+          "published": true,
+          "isLowStock": true,
+          "price": 150000
+        }
+      ],
+      "summary": {
+        "totalUnits": 1250,
+        "totalProducts": 150
+      }
+    }
+    ```
+  - **Response 200 (groupBy=status)**:
+    ```json
+    {
+      "data": {
+        "published": {
+          "productCount": 120,
+          "totalUnits": 1050,
+          "averageInventory": 8.75
+        },
+        "unpublished": {
+          "productCount": 30,
+          "totalUnits": 200,
+          "averageInventory": 6.67
+        }
+      },
+      "summary": {
+        "totalUnits": 1250,
+        "totalProducts": 150
+      }
+    }
+    ```
+  - **Errors**: 401, 400 (invalid groupBy), 500
+  - **Implementation Details**:
+    - **groupBy=category**: Aggregate products grouped by categoryId with SUM(inventory)
+    - **groupBy=product**: Return all products with inventory data, optionally filter low stock
+    - **groupBy=status**: Aggregate by published field
+    - Low stock flag: `inventory <= lowStockThreshold`
+    - Filter unpublished products unless `includeUnpublished=true`
+    - Sort by inventory ASC for low stock visibility
+
+**Performance Optimizations for Analytics**:
+- **Database Indexes**: Add composite indexes for common analytics queries:
+  - `CREATE INDEX idx_orders_created_status ON orders(createdAt, status)`
+  - `CREATE INDEX idx_order_items_product ON order_items(productId)`
+  - `CREATE INDEX idx_products_category_published ON products(categoryId, published)`
+  - `CREATE INDEX idx_products_inventory ON products(inventory)` (for low stock queries)
+- **Query Optimization**:
+  - Use database aggregations (`groupBy`, `SUM`, `AVG`, `COUNT`) instead of loading all records
+  - Limit result sets with default pagination for large datasets
+  - Cache dashboard summary stats for 5 minutes using in-memory cache or Redis
+- **Denormalization (Future)**:
+  - Create `ProductAnalytics` table to store pre-computed revenue per product (updated via triggers or cron jobs)
+  - Create `MonthlyRevenue` table for faster historical revenue queries
+  - Use database views for complex aggregations
+- **Monitoring**:
+  - Log slow queries (>100ms) for analytics endpoints
+  - Set timeout limits (10s) for analytics API calls
+  - Return partial results if aggregation takes too long
+
+**UI Components for Admin Dashboard**:
+- **Dashboard Cards** (existing, update with new data):
+  - Total Products → Split into "Published: 120 | Unpublished: 30"
+  - Total Orders → Add status breakdown chart (pie chart or stacked bar)
+  - Revenue → Add monthly trend chart (line graph for last 6 months)
+- **New Dashboard Sections**:
+  - **Inventory Overview**:
+    - Table: Category | Total Units | Products | Low Stock Alert
+    - Sort by: Total Units DESC or Low Stock DESC
+    - Click category row → drill down to product list for that category
+  - **Revenue Analytics**:
+    - Tabs: By Month | By Product | By Category | By Order
+    - Monthly chart: Line graph with selectable date range
+    - Top Products table: Product Name | Revenue | Units Sold | Avg Price
+    - Export to CSV button for each view
+  - **Low Stock Alerts**:
+    - Red badge with count on dashboard
+    - Dedicated page `/admin/inventory/low-stock` with sortable table
+    - Quick action buttons: "Restock" (edit product inventory inline)
+- **Filters & Date Pickers**:
+  - Global date range selector on dashboard (Last 7 days, Last 30 days, This Month, Last Month, Custom)
+  - Persist filter state in URL query params for shareable links
+
 **API Architecture Notes**:
 - **CORS Configuration** ([lib/cors.ts](apps/backend/lib/cors.ts)): Allows all origins (`*`) for local dev, credentials disabled, handles OPTIONS preflight
 - **Authentication** ([lib/auth.ts](apps/backend/lib/auth.ts)): `requireAdmin` HOF applies CORS and verifies JWT, injects `adminId` into request
