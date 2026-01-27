@@ -58,7 +58,6 @@ export default function AdminOrderDetail() {
       router.push('/admin');
       return;
     }
-    // Không cần setToken nữa
   }, [router]);
 
   const {
