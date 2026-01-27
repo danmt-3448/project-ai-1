@@ -1,49 +1,36 @@
+
+
 import type {
   Category,
   Product,
   Order,
   DashboardResponse,
 } from '@/types';
+import axios from './axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 class ApiClient {
-  private baseUrl: string;
 
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
-  }
-
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Request failed' }));
-      throw new Error(error.message || `HTTP ${response.status}`);
-    }
-
-    return response.json();
+  async adminGetOrderById(id: string): Promise<Order> {
+    const res = await axios.get(`/admin/orders/${id}`);
+    return res.data;
   }
 
   // Categories
+
   async getCategories(): Promise<Category[]> {
-    return this.request<Category[]>('/categories');
+    const res = await axios.get('/categories');
+    return res.data;
   }
 
+
   async getCategoryProducts(slug: string): Promise<{ category: Category; products: Product[] }> {
-    return this.request<{ category: Category; products: Product[] }>(
-      `/categories/${slug}/products`
-    );
+    const res = await axios.get(`/categories/${slug}/products`);
+    return res.data;
   }
 
   // Products
+
   async getProducts(params?: {
     category?: string;
     search?: string;
@@ -55,77 +42,105 @@ class ApiClient {
     if (params?.search) query.set('search', params.search);
     if (params?.page) query.set('page', params.page.toString());
     if (params?.limit) query.set('limit', params.limit.toString());
-
     const queryString = query.toString();
-    return this.request<{ data: Product[]; total: number; page: number; limit: number }>(
-      `/products${queryString ? `?${queryString}` : ''}`
-    );
+    const res = await axios.get(`/products${queryString ? `?${queryString}` : ''}`);
+    return res.data;
   }
 
+
   async getProduct(slug: string): Promise<Product> {
-    return this.request<Product>(`/products/${slug}`);
+    const res = await axios.get(`/products/${slug}`);
+    return res.data;
   }
 
   // Checkout
+
   async checkout(data: {
     buyer: { name: string; email: string; address: string };
     items: { productId: string; quantity: number }[];
     simulate?: 'success' | 'fail';
   }): Promise<{ orderId: string; status: string; total: number }> {
-    return this.request('/checkout', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const res = await axios.post('/checkout', data);
+    return res.data;
   }
 
   // Orders
+
   async getOrder(id: string): Promise<Order> {
-    return this.request<Order>(`/orders/${id}`);
+    const res = await axios.get(`/orders/${id}`);
+    return res.data;
   }
 
   // Admin
+
   async adminLogin(
     username: string,
     password: string
   ): Promise<{ token: string; admin: { id: string; username: string } }> {
-    return this.request('/admin/login', {
-      method: 'POST',
-      body: JSON.stringify({ username, password }),
-    });
+    const res = await axios.post('/admin/login', { username, password });
+    return res.data;
   }
 
-  async adminGetProducts(token: string): Promise<Product[]> {
-    return this.request('/admin/products', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  async adminGetProducts(params?: { search?: string; page?: number; limit?: number }): Promise<{ data: Product[]; total: number; page: number; limit: number; totalPages: number }> {
+    const query = new URLSearchParams();
+    if (params?.search) query.set('search', params.search);
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    const queryString = query.toString();
+    const res = await axios.get(`/admin/products${queryString ? `?${queryString}` : ''}`);
+    return res.data;
   }
 
-  async adminCreateProduct(token: string, data: Partial<Product>): Promise<Product> {
-    return this.request('/admin/products', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify(data),
-    });
+  async adminGetProductById(id: string): Promise<Product> {
+    const res = await axios.get(`/admin/products/${id}`);
+    return res.data;
   }
 
-  async adminUpdateProduct(token: string, id: string, data: Partial<Product>): Promise<Product> {
-    return this.request(`/admin/products/${id}`, {
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify(data),
-    });
+  async adminGetCategories(): Promise<Category[]> {
+    const res = await axios.get('/admin/categories');
+    return res.data;
   }
 
-  async adminDeleteProduct(token: string, id: string): Promise<void> {
-    return this.request(`/admin/products/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  async adminCreateCategory(data: { name: string; slug: string }): Promise<Category> {
+    const res = await axios.post('/admin/categories', data);
+    return res.data;
+  }
+
+  async adminUpdateCategory(id: string, data: { name: string; slug: string }): Promise<Category> {
+    const res = await axios.put(`/admin/categories/${id}`, data);
+    return res.data;
+  }
+
+  async adminDeleteCategory(id: string): Promise<void> {
+    await axios.delete(`/admin/categories/${id}`);
+  }
+
+  async adminGetOrders(params?: { page?: number; limit?: number; status?: string }): Promise<{ data: Order[]; total: number; page: number; limit: number; totalPages: number }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    if (params?.status) query.set('status', params.status);
+    const queryString = query.toString();
+    const res = await axios.get(`/admin/orders${queryString ? `?${queryString}` : ''}`);
+    return res.data;
+  }
+
+  async adminCreateProduct(data: Partial<Product>): Promise<Product> {
+    const res = await axios.post('/admin/products', data);
+    return res.data;
+  }
+
+  async adminUpdateProduct(id: string, data: Partial<Product>): Promise<Product> {
+    const res = await axios.put(`/admin/products/${id}`, data);
+    return res.data;
+  }
+
+  async adminDeleteProduct(id: string): Promise<void> {
+    await axios.delete(`/admin/products/${id}`);
   }
 
   // Order Status Management APIs (Sprint 6)
   async adminUpdateOrderStatus(
-    token: string,
     orderId: string,
     data: {
       status: string;
@@ -139,21 +154,15 @@ class ApiClient {
     },
     idempotencyKey?: string
   ): Promise<{ order: Order; restocked?: Array<{ productId: string; quantity: number }> }> {
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${token}`,
-    };
+    const headers: Record<string, string> = {};
     if (idempotencyKey) {
       headers['Idempotency-Key'] = idempotencyKey;
     }
-    return this.request(`/admin/orders/${orderId}/status`, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify(data),
-    });
+    const res = await axios.put(`/admin/orders/${orderId}/status`, data, { headers });
+    return res.data;
   }
 
   async adminGetOrderActivities(
-    token: string,
     orderId: string
   ): Promise<{
     orderId: string;
@@ -167,27 +176,20 @@ class ApiClient {
       admin: { id: string; username: string };
     }>;
   }> {
-    return this.request(`/admin/orders/${orderId}/activities`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await axios.get(`/admin/orders/${orderId}/activities`);
+    return res.data;
   }
 
   // Admin dashboard analytics
   async adminGetDashboard(
-    token: string,
     params?: { startDate?: string; endDate?: string }
   ): Promise<DashboardResponse> {
     const query = new URLSearchParams();
     if (params?.startDate) query.set('startDate', params.startDate);
     if (params?.endDate) query.set('endDate', params.endDate);
-
-    return this.request<DashboardResponse>(
-      `/admin/analytics/dashboard${query.toString() ? `?${query.toString()}` : ''}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const res = await axios.get(`/admin/analytics/dashboard${query.toString() ? `?${query.toString()}` : ''}`);
+    return res.data;
   }
 }
 
-export const api = new ApiClient(API_BASE_URL);
+export const api = new ApiClient();

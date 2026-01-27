@@ -8,12 +8,8 @@ import type { DashboardResponse } from '@/types';
 
 // Fetcher function for SWR
 const dashboardFetcher = async () => {
-  const token = localStorage.getItem('adminToken');
-
-  if (!token) throw new Error('No auth token');
-
   try {
-    const response = await api.adminGetDashboard(token);
+    const response = await api.adminGetDashboard();
     return response;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Failed to fetch dashboard data');

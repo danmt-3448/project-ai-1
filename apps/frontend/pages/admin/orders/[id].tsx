@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
+import Image from 'next/image';
 import { api } from '@/lib/api';
 import OrderStatusBadge from '@/components/OrderStatusBadge';
 import OrderActivityTimeline from '@/components/OrderActivityTimeline';
@@ -36,15 +38,14 @@ interface Order {
 export default function AdminOrderDetail() {
   const router = useRouter();
   const { id } = router.query;
-  const [token, setToken] = useState<string | null>(null);
+
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Modal states
   const [showShipModal, setShowShipModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showDeliverModal, setShowDeliverModal] = useState(false);
-  
+
   // Form states
   const [trackingNumber, setTrackingNumber] = useState('');
   const [carrier, setCarrier] = useState('');
@@ -57,45 +58,32 @@ export default function AdminOrderDetail() {
       router.push('/admin');
       return;
     }
-    setToken(adminToken);
+    // Không cần setToken nữa
   }, [router]);
-
-  const fetcher = async (url: string) => {
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) throw new Error('Failed to fetch');
-    return res.json();
-  };
 
   const {
     data: order,
     error: fetchError,
     mutate,
   } = useSWR<Order>(
-    token && id ? `${process.env.NEXT_PUBLIC_API_URL}/orders/${id}` : null,
-    fetcher
+    id ? `/admin/orders/${id}` : null,
+    () => api.adminGetOrderById(id as string) as any
   );
 
   const handleMarkProcessing = async () => {
-    if (!token || !id) return;
-    
+    if (!id) return;
     try {
       setUpdating(true);
       setError(null);
-      
-      await api.adminUpdateOrderStatus(token, id as string, {
+      await api.adminUpdateOrderStatus(id as string, {
         status: 'PROCESSING',
         note: 'Order confirmed and ready for preparation',
       });
-      
       await mutate();
-      alert('Order marked as Processing successfully!');
+      toast.success('Order marked as Processing successfully!');
     } catch (err: any) {
       setError(err.message);
-      alert(`Failed: ${err.message}`);
+      toast.error(`Failed: ${err.message}`);
     } finally {
       setUpdating(false);
     }
@@ -103,53 +91,47 @@ export default function AdminOrderDetail() {
 
   const handleMarkShipped = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token || !id) return;
-    
+    if (!id) return;
     try {
       setUpdating(true);
       setError(null);
-      
-      await api.adminUpdateOrderStatus(token, id as string, {
+      await api.adminUpdateOrderStatus(id as string, {
         status: 'SHIPPED',
         trackingNumber,
         carrier,
         shipDate: new Date().toISOString(),
         note: `Shipped via ${carrier}`,
       });
-      
       await mutate();
       setShowShipModal(false);
       setTrackingNumber('');
       setCarrier('');
-      alert('Order marked as Shipped successfully!');
+      toast.success('Order marked as Shipped successfully!');
     } catch (err: any) {
       setError(err.message);
-      alert(`Failed: ${err.message}`);
+      toast.error(`Failed: ${err.message}`);
     } finally {
       setUpdating(false);
     }
   };
 
   const handleMarkDelivered = async () => {
-    if (!token || !id) return;
-    if (!confirm('Mark this order as Delivered?')) return;
-    
+    if (!id) return;
+    // eslint-disable-next-line no-restricted-globals
+    if (!window.confirm('Mark this order as Delivered?')) return;
     try {
       setUpdating(true);
       setError(null);
-      
-      await api.adminUpdateOrderStatus(token, id as string, {
+      await api.adminUpdateOrderStatus(id as string, {
         status: 'DELIVERED',
         deliveryDate: new Date().toISOString(),
         note: 'Order delivered successfully',
       });
-      
       await mutate();
-      setShowDeliverModal(false);
-      alert('Order marked as Delivered successfully!');
+      toast.success('Order marked as Delivered successfully!');
     } catch (err: any) {
       setError(err.message);
-      alert(`Failed: ${err.message}`);
+      toast.error(`Failed: ${err.message}`);
     } finally {
       setUpdating(false);
     }
@@ -157,31 +139,27 @@ export default function AdminOrderDetail() {
 
   const handleCancelOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token || !id) return;
-    
+    if (!id) return;
     try {
       setUpdating(true);
       setError(null);
-      
-      const result = await api.adminUpdateOrderStatus(token, id as string, {
+      const result = await api.adminUpdateOrderStatus(id as string, {
         status: 'CANCELLED',
         cancellationReason,
         shouldRestock,
         note: `Order cancelled: ${cancellationReason}`,
       });
-      
       await mutate();
       setShowCancelModal(false);
       setCancellationReason('');
-      
       if (result.restocked && result.restocked.length > 0) {
-        alert(`Order cancelled and ${result.restocked.length} product(s) restocked!`);
+        toast.success(`Order cancelled and ${result.restocked.length} product(s) restocked!`);
       } else {
-        alert('Order cancelled successfully!');
+        toast.success('Order cancelled successfully!');
       }
     } catch (err: any) {
       setError(err.message);
-      alert(`Failed: ${err.message}`);
+      toast.error(`Failed: ${err.message}`);
     } finally {
       setUpdating(false);
     }
@@ -191,7 +169,7 @@ export default function AdminOrderDetail() {
     if (!order) return false;
     const current = order.status.toUpperCase();
     const target = targetStatus.toUpperCase();
-    
+
     const transitions: Record<string, string[]> = {
       PENDING: ['PROCESSING', 'CANCELLED'],
       PROCESSING: ['SHIPPED', 'CANCELLED'],
@@ -199,13 +177,9 @@ export default function AdminOrderDetail() {
       DELIVERED: [],
       CANCELLED: [],
     };
-    
+
     return transitions[current]?.includes(target) || false;
   };
-
-  if (!token) {
-    return <div className="py-12 text-center">Loading...</div>;
-  }
 
   if (fetchError) {
     return (
@@ -243,20 +217,18 @@ export default function AdminOrderDetail() {
             <div>
               <h1 className="mb-2 text-3xl font-bold">Order #{order.id.slice(0, 8)}</h1>
               <p className="text-gray-600">
-                Placed on {new Date(order.createdAt).toLocaleString('en-US', { 
-                  month: 'short', 
-                  day: 'numeric', 
+                Placed on{' '}
+                {new Date(order.createdAt).toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
                   year: 'numeric',
                   hour: '2-digit',
-                  minute: '2-digit'
+                  minute: '2-digit',
                 })}
               </p>
             </div>
             <div className="text-right">
-              <OrderStatusBadge 
-                status={(order?.status as any) || 'PENDING'}
-                size="lg"
-              />
+              <OrderStatusBadge status={(order?.status as any) || 'PENDING'} size="lg" />
               {order?.trackingNumber && (
                 <p className="mt-2 text-sm text-gray-600">
                   {order.carrier}: {order.trackingNumber}
@@ -298,10 +270,11 @@ export default function AdminOrderDetail() {
                     className="flex items-center gap-4 border-b pb-4 last:border-b-0 last:pb-0"
                   >
                     <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                      <img
+                      <Image
                         src={item.product?.images[0] || '/placeholder-product.png'}
                         alt={item.name}
-                        className="h-full w-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                     </div>
 
@@ -348,10 +321,10 @@ export default function AdminOrderDetail() {
             </div>
 
             {/* Activity Timeline */}
-            {token && id && (
+            {id && (
               <div className="rounded-lg border bg-white p-6 shadow-sm">
                 <h2 className="mb-4 text-xl font-bold">Order History</h2>
-                <OrderActivityTimeline orderId={id as string} token={token} />
+                <OrderActivityTimeline orderId={id as string} />
               </div>
             )}
           </div>
@@ -363,7 +336,7 @@ export default function AdminOrderDetail() {
               <div className="rounded-lg border bg-white p-6 shadow-sm">
                 <h2 className="mb-3 text-sm font-medium text-gray-600">Current Status</h2>
                 <OrderStatusBadge status={order.status.toUpperCase() as any} size="lg" />
-                
+
                 {order.trackingNumber && (
                   <div className="mt-4 space-y-2 border-t pt-4">
                     <div>
@@ -379,15 +352,13 @@ export default function AdminOrderDetail() {
                   </div>
                 )}
               </div>
-              
+
               {/* Action Buttons */}
               <div className="rounded-lg border bg-white p-6 shadow-sm">
                 <h2 className="mb-4 text-xl font-bold">Actions</h2>
-                
+
                 {error && (
-                  <div className="mb-4 rounded bg-red-50 p-3 text-sm text-red-800">
-                    {error}
-                  </div>
+                  <div className="mb-4 rounded bg-red-50 p-3 text-sm text-red-800">{error}</div>
                 )}
 
                 <div className="space-y-3">

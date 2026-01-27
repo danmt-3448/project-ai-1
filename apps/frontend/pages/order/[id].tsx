@@ -2,8 +2,8 @@ import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
+import Image from 'next/image';
 import { api } from '@/lib/api';
-import { as } from 'vitest/dist/reporters-w_64AS5f.js';
 
 interface Order {
   id: number;
@@ -149,10 +149,12 @@ export default function OrderDetail() {
                 className="flex items-center gap-4 border-b pb-4 last:border-b-0 last:pb-0"
               >
                 <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                  <img
+                  <Image
                     src={item.product.images[0] || '/placeholder-product.png'}
                     alt={item.name}
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="80px"
                   />
                 </div>
 

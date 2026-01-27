@@ -1,87 +1,40 @@
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+
+import { useState } from 'react';
 import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
+import { api } from '@/lib/api';
+import type { Product } from '@/types';
+import { toast } from 'react-toastify';
 
-interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  price: number;
-  inventory: number;
-  published: boolean;
-  images: string[];
-  category: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ProductsResponse {
-  data: Product[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
 
 export default function AdminProducts() {
-  const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const adminToken = localStorage.getItem('adminToken');
-    if (!adminToken) {
-      router.push('/admin');
-      return;
-    }
-    setToken(adminToken);
-  }, [router]);
+  // SWR fetcher using api client
 
-  const fetcher = async (url: string) => {
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) throw new Error('Failed to fetch');
-    return res.json();
+  const fetcher = async () => {
+    const params = { search, page, limit: 20 };
+    return await api.adminGetProducts(params);
   };
 
-  const { data, error, mutate } = useSWR<ProductsResponse>(
-    token
-      ? `${process.env.NEXT_PUBLIC_API_URL}/admin/products?page=${page}&limit=20&search=${search}`
-      : null,
+  const { data, error, mutate } = useSWR(
+    ['/admin/products', search, page],
     fetcher
   );
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
-
     try {
       setDeleteId(id);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/products/${id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) throw new Error('Failed to delete');
-
+      await api.adminDeleteProduct(id);
       mutate();
-      alert('Product deleted successfully');
+      toast.success('Product deleted successfully');
     } catch (error) {
-      alert('Failed to delete product');
+      toast.error('Failed to delete product');
     } finally {
       setDeleteId(null);
     }
@@ -89,35 +42,18 @@ export default function AdminProducts() {
 
   const handleTogglePublish = async (product: Product) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/products/${product.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          published: !product.published,
-        }),
-      });
-
-      if (!res.ok) throw new Error('Failed to update');
-
+      await api.adminUpdateProduct(product.id, { published: !product.published });
       mutate();
     } catch (error) {
-      alert('Failed to update product');
+      toast.error('Failed to update product');
     }
   };
-
-  if (!token) {
-    return <div className="py-12 text-center">Loading...</div>;
-  }
 
   return (
     <>
       <Head>
         <title>Manage Products - Admin</title>
       </Head>
-
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
@@ -216,7 +152,7 @@ export default function AdminProducts() {
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-6 py-4">
-                          <span className="text-sm text-gray-700">{product.category.name}</span>
+                          <span className="text-sm text-gray-700">{product.category?.name}</span>
                         </td>
                         <td className="whitespace-nowrap px-6 py-4">
                           <span className="text-sm font-medium text-gray-900">

@@ -1,64 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
-
-interface Order {
-  id: number;
-  buyerName: string;
-  buyerEmail: string;
-  address: string;
-  total: number;
-  status: string;
-  createdAt: string;
-  items: Array<{
-    id: number;
-    name: string;
-    price: number;
-    quantity: number;
-  }>;
-}
-
-interface OrdersResponse {
-  data: Order[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+import { api } from '@/lib/api';
+import type { Order } from '@/types';
 
 export default function AdminOrders() {
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    const adminToken = localStorage.getItem('adminToken');
-    if (!adminToken) {
-      router.push('/admin');
-      return;
-    }
-    setToken(adminToken);
-  }, [router]);
-
-  const fetcher = async (url: string) => {
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) throw new Error('Failed to fetch');
-    return res.json();
+  // SWR fetcher using api client
+  const fetcher = async () => {
+    return await api.adminGetOrders({ page, limit: 20, status: statusFilter || undefined });
   };
 
-  const { data, error } = useSWR<OrdersResponse>(
-    token
-      ? `${process.env.NEXT_PUBLIC_API_URL}/admin/orders?page=${page}&limit=20${
-          statusFilter ? `&status=${statusFilter}` : ''
-        }`
-      : null,
+  const { data, error } = useSWR(
+    ['/admin/orders', page, statusFilter],
     fetcher
   );
 
@@ -69,10 +28,6 @@ export default function AdminOrders() {
     delivered: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
   };
-
-  if (!token) {
-    return <div className="py-12 text-center">Loading...</div>;
-  }
 
   return (
     <>
