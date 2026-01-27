@@ -228,7 +228,7 @@ export default function AdminProducts() {
                             className={`text-sm font-medium ${
                               product.inventory === 0
                                 ? 'text-red-600'
-                                : product.inventory < 10
+                                : product.inventory < 5
                                   ? 'text-orange-600'
                                   : 'text-gray-900'
                             }`}
@@ -251,7 +251,7 @@ export default function AdminProducts() {
                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                           <div className="flex justify-end gap-2">
                             <Link
-                              href={`/admin/products/${product.id}/edit`}
+                              href={`/admin/products/${product.slug}/edit`}
                               className="text-blue-600 hover:text-blue-900"
                             >
                               Edit

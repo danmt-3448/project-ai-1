@@ -242,7 +242,6 @@ async function handler(
           inventory: {
             lte: LOW_STOCK_THRESHOLD,
           },
-          published: true,
         },
         include: {
           category: {
@@ -339,6 +338,18 @@ async function handler(
     const totalUnits = calculateTotalInventory(inventoryByCategory)
     const inventoryByCategoryFormatted =
       formatInventoryByCategory(inventoryByCategory)
+
+    // Debug: Log lowStock products
+    console.log('[Dashboard] lowStockProducts count:', lowStockProducts.length)
+    console.log('[Dashboard] lowStockProducts data:', 
+      lowStockProducts.map(p => ({ 
+        id: p.id, 
+        name: p.name, 
+        slug: p.slug, 
+        inventory: p.inventory,
+        published: p.published 
+      }))
+    )
 
     // Calculate revenue metrics
     const totalRevenue = confirmedOrders.reduce(
