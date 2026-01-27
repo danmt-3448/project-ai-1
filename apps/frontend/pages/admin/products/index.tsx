@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import useSWR from 'swr';
 import Head from 'next/head';
@@ -7,9 +6,9 @@ import Image from 'next/image';
 import { api } from '@/lib/api';
 import type { Product } from '@/types';
 import { toast } from 'react-toastify';
+import { withAdminAuth } from '@/lib/withAdminAuth';
 
-
-export default function AdminProducts() {
+function AdminProducts() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -21,10 +20,7 @@ export default function AdminProducts() {
     return await api.adminGetProducts(params);
   };
 
-  const { data, error, mutate } = useSWR(
-    ['/admin/products', search, page],
-    fetcher
-  );
+  const { data, error, mutate } = useSWR(['/admin/products', search, page], fetcher);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
@@ -236,3 +232,5 @@ export default function AdminProducts() {
     </>
   );
 }
+
+export default withAdminAuth(AdminProducts);

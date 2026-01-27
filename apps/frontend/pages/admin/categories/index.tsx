@@ -1,15 +1,13 @@
 
-import { useState } from 'react';
-import { useRouter } from 'next/router';
-import useSWR from 'swr';
-import Head from 'next/head';
-import Link from 'next/link';
+import { withAdminAuth } from '@/lib/withAdminAuth';
 import { api } from '@/lib/api';
 import type { Category } from '@/types';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useState } from 'react';
+import useSWR from 'swr';
 
-export default function AdminCategories() {
-  const router = useRouter();
-
+function AdminCategories() {
   // Form states
   const [createName, setCreateName] = useState('');
   const [createSlug, setCreateSlug] = useState('');
@@ -459,3 +457,5 @@ export default function AdminCategories() {
     </>
   );
 }
+
+export default withAdminAuth(AdminCategories);

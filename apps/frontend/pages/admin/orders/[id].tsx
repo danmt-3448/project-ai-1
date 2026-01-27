@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import Head from 'next/head';
+import { withAdminAuth } from '@/lib/withAdminAuth';
 import Link from 'next/link';
 import Image from 'next/image';
 import { api } from '@/lib/api';
@@ -35,7 +36,7 @@ interface Order {
   }>;
 }
 
-export default function AdminOrderDetail() {
+function AdminOrderDetail() {
   const router = useRouter();
   const { id } = router.query;
 
@@ -53,11 +54,6 @@ export default function AdminOrderDetail() {
   const [shouldRestock, setShouldRestock] = useState(true);
 
   useEffect(() => {
-    const adminToken = localStorage.getItem('adminToken');
-    if (!adminToken) {
-      router.push('/admin');
-      return;
-    }
     // Không cần setToken nữa
   }, [router]);
 
@@ -228,7 +224,7 @@ export default function AdminOrderDetail() {
               </p>
             </div>
             <div className="text-right">
-              <OrderStatusBadge status={(order?.status as any) || 'PENDING'} size="lg" />
+              export default withAdminAuth(AdminOrderDetail);
               {order?.trackingNumber && (
                 <p className="mt-2 text-sm text-gray-600">
                   {order.carrier}: {order.trackingNumber}
@@ -530,3 +526,5 @@ export default function AdminOrderDetail() {
     </>
   );
 }
+
+export default withAdminAuth(AdminOrderDetail);
