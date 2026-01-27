@@ -11,7 +11,6 @@ import OrderStatusBadge from './OrderStatusBadge';
 
 export interface OrderActivityTimelineProps {
   orderId: string;
-  token: string;
 }
 
 interface Activity {
@@ -23,7 +22,7 @@ interface Activity {
   admin: { id: string; username: string };
 }
 
-const OrderActivityTimeline: React.FC<OrderActivityTimelineProps> = ({ orderId, token }) => {
+const OrderActivityTimeline: React.FC<OrderActivityTimelineProps> = ({ orderId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentStatus, setCurrentStatus] = useState<string>('');
@@ -34,7 +33,7 @@ const OrderActivityTimeline: React.FC<OrderActivityTimelineProps> = ({ orderId, 
       try {
         setLoading(true);
         setError(null);
-        const data = await api.adminGetOrderActivities(token, orderId);
+        const data = await api.adminGetOrderActivities(orderId);
         setCurrentStatus(data.currentStatus);
         setActivities(data.activities);
       } catch (err: any) {
@@ -45,7 +44,7 @@ const OrderActivityTimeline: React.FC<OrderActivityTimelineProps> = ({ orderId, 
     };
 
     fetchActivities();
-  }, [orderId, token]);
+  }, [orderId]);
 
   const formatTimestamp = (timestamp: string): string => {
     const date = new Date(timestamp);

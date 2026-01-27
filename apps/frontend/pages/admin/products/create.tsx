@@ -1,18 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-}
+import { api } from '@/lib/api';
+import type { Category } from '@/types';
 
 export default function CreateProduct() {
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,25 +22,7 @@ export default function CreateProduct() {
     published: false,
   });
 
-  useEffect(() => {
-    const adminToken = localStorage.getItem('adminToken');
-    if (!adminToken) {
-      router.push('/admin');
-      return;
-    }
-    setToken(adminToken);
-  }, [router]);
-
-  const fetcher = async (url: string) => {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Failed to fetch');
-    return res.json();
-  };
-
-  const { data: categories } = useSWR<Category[]>(
-    token ? `${process.env.NEXT_PUBLIC_API_URL}/categories` : null,
-    fetcher
-  );
+  const { data: categories } = useSWR<Category[]>('/categories', () => api.getCategories());
 
   const generateSlug = (name: string) => {
     return name
@@ -88,39 +65,23 @@ export default function CreateProduct() {
     try {
       const images = formData.images.filter((img) => img.trim() !== '');
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/products`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          slug: formData.slug,
-          description: formData.description,
-          price: parseFloat(formData.price),
-          inventory: parseInt(formData.inventory, 10),
-          categoryId: formData.categoryId,
-          images,
-          published: formData.published,
-        }),
+      await api.adminCreateProduct({
+        name: formData.name,
+        slug: formData.slug,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        inventory: parseInt(formData.inventory, 10),
+        categoryId: formData.categoryId,
+        images,
+        published: formData.published,
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to create product');
-      }
 
       router.push('/admin/products');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to create product');
       setLoading(false);
     }
   };
-
-  if (!token) {
-    return <div className="py-12 text-center">Loading...</div>;
-  }
 
   return (
     <>

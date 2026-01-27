@@ -1,19 +1,14 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  productCount: number;
-}
+import { api } from '@/lib/api';
+import type { Category } from '@/types';
 
 export default function AdminCategories() {
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
 
   // Form states
   const [createName, setCreateName] = useState('');
@@ -33,45 +28,16 @@ export default function AdminCategories() {
   const [deleteError, setDeleteError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    const adminToken = localStorage.getItem('adminToken');
-    if (!adminToken) {
-      router.push('/admin');
-      return;
-    }
-    setToken(adminToken);
-  }, [router]);
-
-  const fetcher = async (url: string) => {
-    if (!token) return null;
-
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (response.status === 401) {
-      localStorage.removeItem('adminToken');
-      router.push('/admin');
-      throw new Error('Unauthorized');
-    }
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch');
-    }
-
-    return response.json();
+  // SWR fetcher using api client
+  const fetcher = async () => {
+    return await api.adminGetCategories();
   };
 
   const {
     data: categories,
     error,
     mutate,
-  } = useSWR<Category[]>(
-    token ? `${process.env.NEXT_PUBLIC_API_URL}/admin/categories` : null,
-    fetcher
-  );
+  } = useSWR('/admin/categories', fetcher);
 
   // Client-side slug validation
   const validateSlug = (slug: string): string | null => {
@@ -85,6 +51,7 @@ export default function AdminCategories() {
   };
 
   // Handle create category
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError('');
@@ -104,37 +71,12 @@ export default function AdminCategories() {
     setIsCreating(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/categories`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: createName,
-          slug: createSlug,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 409) {
-          setCreateError(`Category with slug "${createSlug}" already exists`);
-        } else if (data.error === 'Validation failed') {
-          setCreateError(data.details?.[0]?.message || 'Invalid input');
-        } else {
-          setCreateError(data.message || 'Failed to create category');
-        }
-        return;
-      }
-
-      // Success - clear form and refresh list
+      await api.adminCreateCategory({ name: createName, slug: createSlug });
+      mutate();
       setCreateName('');
       setCreateSlug('');
-      mutate();
-    } catch (err) {
-      setCreateError('Network error. Please try again.');
+    } catch (err: any) {
+      setCreateError(err.message || 'Failed to create category');
     } finally {
       setIsCreating(false);
     }
@@ -174,36 +116,11 @@ export default function AdminCategories() {
     setIsSaving(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/categories/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: editName,
-          slug: editSlug,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 409) {
-          setEditError(`Category with slug "${editSlug}" already exists`);
-        } else if (data.error === 'Validation failed') {
-          setEditError(data.details?.[0]?.message || 'Invalid input');
-        } else {
-          setEditError(data.message || 'Failed to update category');
-        }
-        return;
-      }
-
-      // Success - exit edit mode and refresh
+      await api.adminUpdateCategory(id, { name: editName, slug: editSlug });
       setEditingId(null);
       mutate();
-    } catch (err) {
-      setEditError('Network error. Please try again.');
+    } catch (err: any) {
+      setEditError(err.message || 'Failed to update category');
     } finally {
       setIsSaving(false);
     }
@@ -222,37 +139,11 @@ export default function AdminCategories() {
     setDeleteError('');
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/categories/${deleteId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.status === 409) {
-        const data = await response.json();
-        const category = categories?.find((c) => c.id === deleteId);
-        setDeleteError(
-          data.message ||
-            `Cannot delete category with ${category?.productCount || 0} associated products`
-        );
-        return;
-      }
-
-      if (!response.ok) {
-        const data = await response.json();
-        setDeleteError(data.message || 'Failed to delete category');
-        return;
-      }
-
-      // Success - close modal and refresh
+      await api.adminDeleteCategory(deleteId);
       setDeleteId(null);
       mutate();
-    } catch (err) {
-      setDeleteError('Network error. Please try again.');
+    } catch (err: any) {
+      setDeleteError(err.message || 'Failed to delete category');
     } finally {
       setIsDeleting(false);
     }
@@ -263,11 +154,7 @@ export default function AdminCategories() {
     setDeleteError('');
   };
 
-  if (!token) {
-    return null;
-  }
-
-  const categoryToDelete = categories?.find((c) => c.id === deleteId);
+  const categoryToDelete = categories?.find((c: Category) => c.id === deleteId);
 
   return (
     <>
@@ -531,7 +418,7 @@ export default function AdminCategories() {
                       <p className="text-sm text-gray-500">
                         Are you sure you want to delete "<strong>{categoryToDelete?.name}</strong>"?
                       </p>
-                      {categoryToDelete && categoryToDelete.productCount > 0 && (
+                      {categoryToDelete && (categoryToDelete.productCount || 0) > 0 && (
                         <p className="mt-2 text-sm font-medium text-red-600">
                           ⚠️ This category has {categoryToDelete.productCount} associated
                           product(s). You cannot delete it until those products are reassigned or
@@ -551,7 +438,7 @@ export default function AdminCategories() {
                 <button
                   type="button"
                   onClick={handleDelete}
-                  disabled={isDeleting || (categoryToDelete && categoryToDelete.productCount > 0)}
+                  disabled={isDeleting || (categoryToDelete && (categoryToDelete.productCount || 0) > 0)}
                   className="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   {isDeleting ? 'Deleting...' : 'Delete'}
