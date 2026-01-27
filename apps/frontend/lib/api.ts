@@ -1,44 +1,11 @@
+import type {
+  Category,
+  Product,
+  Order,
+  DashboardResponse,
+} from '@/types';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-export interface Category {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-export interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  price: number;
-  inventory: number;
-  published: boolean;
-  images: string[];
-  categoryId: string;
-  category?: Category;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Order {
-  id: string;
-  buyerName: string;
-  buyerEmail: string;
-  address: string;
-  total: number;
-  status: string;
-  items: OrderItem[];
-  createdAt: string;
-}
-
-export interface OrderItem {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-}
 
 class ApiClient {
   private baseUrl: string;
@@ -203,6 +170,23 @@ class ApiClient {
     return this.request(`/admin/orders/${orderId}/activities`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+  }
+
+  // Admin dashboard analytics
+  async adminGetDashboard(
+    token: string,
+    params?: { startDate?: string; endDate?: string }
+  ): Promise<DashboardResponse> {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.set('startDate', params.startDate);
+    if (params?.endDate) query.set('endDate', params.endDate);
+
+    return this.request<DashboardResponse>(
+      `/admin/analytics/dashboard${query.toString() ? `?${query.toString()}` : ''}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
   }
 }
 

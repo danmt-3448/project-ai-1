@@ -2,7 +2,8 @@ import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
-import { api, Product } from '@/lib/api';
+import { api } from '@/lib/api';
+import type { Product } from '@/types';
 import ProductCard from '@/components/ProductCard';
 import { useMemo } from 'react';
 
@@ -10,7 +11,7 @@ export default function CategoryProducts() {
   const router = useRouter();
   const { slug } = router.query;
 
-  const { data, error } = useSWR<{ category: import('@/lib/api').Category; products: import('@/lib/api').Product[] }>(
+  const { data, error } = useSWR<{ category: import('@/types').Category; products: import('@/types').Product[] }>(
     slug ? `/api/categories/${slug}/products` : null,
     () => api.getCategoryProducts(slug as string)
   );

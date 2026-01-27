@@ -1,16 +1,14 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'test-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 
 /**
  * Generate a test JWT token for admin user
  */
-export function generateAdminToken(userId: number = 1): string {
+export function generateAdminToken(adminId: number = 1): string {
   return jwt.sign(
     {
-      userId,
-      email: 'admin@test.com',
-      role: 'ADMIN',
+      adminId: String(adminId),
     },
     JWT_SECRET,
     { expiresIn: '1h' }

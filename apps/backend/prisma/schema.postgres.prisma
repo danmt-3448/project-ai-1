@@ -34,6 +34,8 @@ model Product {
   @@index([categoryId])
   @@index([published])
   @@index([slug])
+  @@index([categoryId, published]) // Composite index for analytics queries
+  @@index([inventory]) // For low stock queries
   @@map("products")
 }
 
@@ -58,6 +60,7 @@ model Order {
 
   @@index([status])
   @@index([createdAt])
+  @@index([createdAt, status]) // Composite index for revenue analytics
   @@map("orders")
 }
 
@@ -71,6 +74,7 @@ model OrderItem {
   quantity  Int
 
   @@index([orderId])
+  @@index([productId]) // For product revenue analytics
   @@map("order_items")
 }
 

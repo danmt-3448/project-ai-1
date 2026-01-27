@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Product as ApiProduct } from '@/lib/api';
+import type { Product as ApiProduct } from '@/types';
 
 interface ProductCardProps {
   product: ApiProduct;

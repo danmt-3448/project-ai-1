@@ -5,18 +5,22 @@ import ProductCard from '@/components/ProductCard';
 
 describe('ProductCard Component', () => {
   const mockProduct = {
-    id: 1,
+    id: '1',
     name: 'Test Product',
     slug: 'test-product',
     description: 'This is a test product',
     price: 150000,
     inventory: 10,
+    published: true,
+    categoryId: '1',
     images: ['https://via.placeholder.com/400'],
     category: {
-      id: 1,
+      id: '1',
       name: 'Test Category',
       slug: 'test-category',
     },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 
   it('should render product information correctly', () => {

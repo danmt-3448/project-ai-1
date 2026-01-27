@@ -1817,11 +1817,467 @@ Goal: Implement comprehensive order status management for admins with audit logg
 
 ---
 
+## Sprint 7: Analytics & Inventory Management Dashboard
+
+### Database Updates (DB)
+
+#### DB-04: Add analytics performance indexes
+- **ID:** DB-04
+- **Estimate:** 1h
+- **Assignee:** Backend Dev
+- **Description:** Add composite indexes to Prisma schema for analytics queries
+- **Acceptance Criteria:**
+  - [x] Add `@@index([categoryId, published])` to Product model
+  - [x] Add `@@index([inventory])` to Product model
+  - [x] Add `@@index([createdAt, status])` to Order model
+  - [x] Add `@@index([productId])` to OrderItem model
+  - [x] Generate migration with `npx prisma migrate dev --name add_analytics_indexes`
+  - [x] Migration applied successfully
+- **Dependencies:** Existing schema
+- **Files:** `apps/backend/prisma/schema.postgres.prisma`, `prisma/migrations/*/migration.sql`
+- **Status:** ✅ Completed
+
+---
+
+### Backend Analytics API (BE)
+
+#### BE-27: Implement GET /api/admin/analytics/dashboard
+- **ID:** BE-27
+- **Estimate:** 2 days (16h)
+- **Assignee:** Backend Dev
+- **Description:** Create comprehensive dashboard analytics endpoint with aggregated stats
+- **Acceptance Criteria:**
+  - [ ] File `apps/backend/pages/api/admin/analytics/dashboard.ts`
+  - [ ] Protected with `requireAdmin` middleware
+  - [ ] Query params: `startDate`, `endDate` (default: last 30 days)
+  - [ ] Response includes:
+    - Products: `{ total, published, unpublished }`
+    - Inventory: `{ totalUnits, byCategory[], lowStock[] }`
+    - Revenue: `{ totalRevenue, totalOrders, averageOrderValue, byMonth[], topProducts[] }`
+    - Orders: `{ total, confirmed, processing, shipped, delivered, cancelled, failed }`
+  - [ ] Use parallel Promise.all() for performance
+  - [ ] Use PostgreSQL `$queryRaw` for monthly revenue and top products
+  - [ ] Filter only confirmed orders (CONFIRMED, PROCESSING, SHIPPED, DELIVERED)
+  - [ ] Low stock threshold: inventory <= 5
+  - [ ] Return 401 for unauthenticated requests
+  - [ ] Return 400 for invalid date formats
+  - [ ] Response time < 500ms with typical dataset (100 products, 500 orders)
+- **Dependencies:** BE-02 (Prisma client), DB-04 (indexes)
+- **Files:** `apps/backend/pages/api/admin/analytics/dashboard.ts`
+- **Reference:** See `ANALYTICS_IMPLEMENTATION.md` for full code example
+
+#### BE-28: Implement GET /api/admin/analytics/revenue
+- **ID:** BE-28
+- **Estimate:** 2 days (16h)
+- **Assignee:** Backend Dev
+- **Description:** Create revenue analytics endpoint with 4 groupBy modes
+- **Acceptance Criteria:**
+  - [ ] File `apps/backend/pages/api/admin/analytics/revenue.ts`
+  - [ ] Protected with `requireAdmin` middleware
+  - [ ] Query params: `groupBy` (required), `startDate`, `endDate`, `limit`, `offset`, `sortBy`, `sortOrder`
+  - [ ] Zod validation for query parameters
+  - [ ] Support groupBy modes:
+    - `order`: Individual orders with pagination (id, buyerName, revenue, itemCount, status, createdAt)
+    - `product`: Revenue per product (productId, name, slug, categoryName, revenue, unitsSold, orderCount)
+    - `month`: Monthly aggregation (month, year, revenue, orderCount, averageOrderValue)
+    - `category`: Revenue per category (categoryId, name, slug, revenue, unitsSold, orderCount, productCount)
+  - [ ] All modes return `{ data, total, page?, limit?, summary }`
+  - [ ] Filter only confirmed orders (CONFIRMED, PROCESSING, SHIPPED, DELIVERED)
+  - [ ] Use `$queryRaw` for complex aggregations
+  - [ ] Support pagination for order/product modes
+  - [ ] Return 400 for invalid groupBy value
+- **Dependencies:** BE-02, DB-04
+- **Files:** `apps/backend/pages/api/admin/analytics/revenue.ts`
+- **Reference:** See `ANALYTICS_IMPLEMENTATION.md` for code examples
+
+#### BE-29: Implement GET /api/admin/analytics/inventory
+- **ID:** BE-29
+- **Estimate:** 1.5 days (12h)
+- **Assignee:** Backend Dev
+- **Description:** Create inventory analytics endpoint with 3 groupBy modes
+- **Acceptance Criteria:**
+  - [ ] File `apps/backend/pages/api/admin/analytics/inventory.ts`
+  - [ ] Protected with `requireAdmin` middleware
+  - [ ] Query params: `groupBy` (default: category), `lowStockThreshold` (default: 5), `includeUnpublished` (default: false)
+  - [ ] Support groupBy modes:
+    - `category`: Total units per category (categoryId, name, slug, totalUnits, productCount, publishedProducts, unpublishedProducts, averageInventory, lowStockProducts)
+    - `product`: Product-level inventory (productId, name, slug, categoryName, inventory, published, isLowStock, price)
+    - `status`: Aggregate by published status ({ published: {}, unpublished: {} })
+  - [ ] All modes return `{ data, summary: { totalUnits, totalProducts } }`
+  - [ ] Low stock flag: `inventory <= lowStockThreshold`
+  - [ ] Sort products by inventory ASC for low stock visibility
+  - [ ] Return 400 for invalid groupBy value
+- **Dependencies:** BE-02, DB-04
+- **Files:** `apps/backend/pages/api/admin/analytics/inventory.ts`
+- **Reference:** See `ANALYTICS_IMPLEMENTATION.md`
+
+#### BE-30: Add analytics error handling and validation
+- **ID:** BE-30
+- **Estimate:** 0.5 day (4h)
+- **Assignee:** Backend Dev
+- **Description:** Add comprehensive validation and error handling for analytics endpoints
+- **Acceptance Criteria:**
+  - [ ] Zod schemas for query parameter validation (all 3 endpoints)
+  - [ ] Validate date formats (ISO 8601) with proper error messages
+  - [ ] Validate enum values (groupBy, sortBy, sortOrder)
+  - [ ] Handle invalid query parameters → 400 with descriptive errors
+  - [ ] Database query timeout handling (10s limit)
+  - [ ] Log slow queries (>100ms) to console with query details
+  - [ ] Catch and handle Prisma errors gracefully → 500 with generic message
+  - [ ] Add try-catch blocks in all endpoints
+- **Dependencies:** BE-27, BE-28, BE-29
+- **Files:** All 3 analytics endpoint files
+
+---
+
+### Backend Testing (TEST)
+
+#### TEST-14: Unit tests for analytics aggregation functions
+- **ID:** TEST-14
+- **Estimate:** 1.5 days (12h)
+- **Assignee:** Backend Dev
+- **Description:** Write unit tests for analytics business logic
+- **Acceptance Criteria:**
+  - [ ] File `apps/backend/tests/api/analytics.test.ts`
+  - [ ] Test revenue calculation accuracy (sum of order totals)
+  - [ ] Test inventory aggregation by category
+  - [ ] Test low stock filtering logic (inventory <= threshold)
+  - [ ] Test date range filtering (edge cases: same day, future dates)
+  - [ ] Mock Prisma client with test data using Vitest
+  - [ ] All tests pass with `yarn test`
+  - [ ] Test coverage ≥ 80% for analytics code
+- **Dependencies:** BE-27, BE-28, BE-29
+- **Files:** `apps/backend/tests/api/analytics.test.ts`
+
+#### TEST-15: Integration API tests for analytics endpoints
+- **ID:** TEST-15
+- **Estimate:** 1 day (8h)
+- **Assignee:** Backend Dev
+- **Description:** Write integration tests for all 3 analytics endpoints
+- **Acceptance Criteria:**
+  - [ ] Test dashboard endpoint returns all expected fields (products, inventory, revenue, orders)
+  - [ ] Test revenue endpoint with each groupBy mode (order, product, month, category)
+  - [ ] Test inventory endpoint with each groupBy mode (category, product, status)
+  - [ ] Test pagination and sorting work correctly
+  - [ ] Test date range filters with edge cases
+  - [ ] Test with empty database (zero orders/products) → returns empty arrays
+  - [ ] Test unauthorized requests return 401
+  - [ ] Test invalid parameters return 400 with error details
+  - [ ] All tests use test database (not dev/production)
+- **Dependencies:** BE-27, BE-28, BE-29, BE-30
+- **Files:** `apps/backend/tests/api/analytics.integration.test.ts`
+
+#### TEST-16: Performance tests for analytics
+- **ID:** TEST-16
+- **Estimate:** 0.5 day (4h)
+- **Assignee:** Backend Dev
+- **Description:** Benchmark analytics endpoints with realistic dataset
+- **Acceptance Criteria:**
+  - [ ] Seed test DB with 100+ products, 1000+ orders
+  - [ ] Benchmark dashboard query execution time < 500ms (p95)
+  - [ ] Benchmark revenue/inventory queries < 300ms (p95)
+  - [ ] Test concurrent requests (10 simultaneous dashboard calls)
+  - [ ] Verify no N+1 query issues (check Prisma query logs)
+  - [ ] Document performance results in test output
+- **Dependencies:** BE-27, BE-28, BE-29, DB-04 (indexes required for performance)
+- **Files:** `apps/backend/tests/api/analytics.performance.test.ts`
+
+---
+
+### Frontend Dashboard (FE)
+
+#### FE-33: Update /admin/dashboard page structure
+- **ID:** FE-33
+- **Estimate:** 1 day (8h)
+- **Assignee:** Frontend Dev
+- **Description:** Refactor admin dashboard page with new analytics structure
+- **Acceptance Criteria:**
+  - [ ] Update `apps/frontend/pages/admin/dashboard.tsx`
+  - [ ] Create TypeScript interfaces for dashboard data types
+  - [ ] Add date range selector component (Last 7/30 days, This Month, Last Month, Custom)
+  - [ ] Add loading states with skeleton screens (Tailwind CSS shimmer)
+  - [ ] Add error boundary with retry functionality
+  - [ ] Page layout: Header with date selector → Stats cards grid → Tables sections
+  - [ ] Responsive layout (mobile, tablet, desktop)
+- **Dependencies:** None (UI structure only)
+- **Files:** `apps/frontend/pages/admin/dashboard.tsx`
+
+#### FE-34: Implement Stats Cards Grid
+- **ID:** FE-34
+- **Estimate:** 0.5 day (4h)
+- **Assignee:** Frontend Dev
+- **Description:** Create 4 stats cards with key metrics
+- **Acceptance Criteria:**
+  - [ ] Card 1: Total Products (show published/unpublished split)
+  - [ ] Card 2: Total Inventory (show total units + low stock badge)
+  - [ ] Card 3: Total Orders (show total + confirmed count)
+  - [ ] Card 4: Revenue (show total + avg order value in VND)
+  - [ ] Color-coded with emoji icons (📦, 📊, 🛍️, 💰)
+  - [ ] Responsive grid: 1 col mobile, 2 col tablet, 4 col desktop
+  - [ ] Tailwind CSS styling with hover effects
+  - [ ] Loading skeleton for each card
+- **Dependencies:** FE-33
+- **Files:** `apps/frontend/pages/admin/dashboard.tsx`
+
+#### FE-35: Implement Inventory by Category Table
+- **ID:** FE-35
+- **Estimate:** 1 day (8h)
+- **Assignee:** Frontend Dev
+- **Description:** Create inventory breakdown table by category
+- **Acceptance Criteria:**
+  - [ ] Table with columns: Category Name, Total Units, Product Count, Low Stock Count
+  - [ ] Sortable columns (click header to sort ASC/DESC)
+  - [ ] Click row → navigate to `/admin/products?category={slug}`
+  - [ ] Highlight low stock categories with red badge
+  - [ ] Responsive: horizontal scroll on mobile
+  - [ ] Loading skeleton for table rows
+  - [ ] Empty state: "No inventory data available"
+- **Dependencies:** FE-33
+- **Files:** `apps/frontend/pages/admin/dashboard.tsx`
+
+#### FE-36: Implement Low Stock Alert Section
+- **ID:** FE-36
+- **Estimate:** 0.5 day (4h)
+- **Assignee:** Frontend Dev
+- **Description:** Create red-themed alert section for low stock products
+- **Acceptance Criteria:**
+  - [ ] Red background with warning icon ⚠️
+  - [ ] Table: Product Name, Category, Current Stock
+  - [ ] Sort by inventory ASC (lowest stock first)
+  - [ ] "Edit" button for each product → navigate to edit page
+  - [ ] Conditional rendering (only show if lowStock.length > 0)
+  - [ ] Responsive table layout
+- **Dependencies:** FE-33
+- **Files:** `apps/frontend/pages/admin/dashboard.tsx`
+
+#### FE-37: Implement Top Products by Revenue Table
+- **ID:** FE-37
+- **Estimate:** 0.5 day (4h)
+- **Assignee:** Frontend Dev
+- **Description:** Create table showing top 10 products by revenue
+- **Acceptance Criteria:**
+  - [ ] Table columns: Product Name, Revenue (VND), Units Sold, Order Count
+  - [ ] Top 10 products by default
+  - [ ] Vietnamese currency formatting: `toLocaleString('vi-VN')` + ₫ symbol
+  - [ ] Click product name → navigate to `/admin/products/{id}/edit`
+  - [ ] Responsive table
+  - [ ] Loading skeleton
+- **Dependencies:** FE-33
+- **Files:** `apps/frontend/pages/admin/dashboard.tsx`
+
+#### FE-38: Implement Monthly Revenue Table
+- **ID:** FE-38
+- **Estimate:** 1 day (8h)
+- **Assignee:** Frontend Dev
+- **Description:** Create table showing monthly revenue trends
+- **Acceptance Criteria:**
+  - [ ] Table columns: Month, Revenue (VND), Orders, Avg Order Value
+  - [ ] Last 6 months by default
+  - [ ] Vietnamese month names (Tháng 1, Tháng 2, etc.)
+  - [ ] Currency formatting for all money columns
+  - [ ] Optional: Add line/bar chart visualization (if chart library added)
+  - [ ] Fallback: Clean HTML table if no chart
+  - [ ] Responsive layout
+- **Dependencies:** FE-33
+- **Files:** `apps/frontend/pages/admin/dashboard.tsx`
+
+#### FE-39: Implement data fetching with SWR
+- **ID:** FE-39
+- **Estimate:** 0.5 day (4h)
+- **Assignee:** Frontend Dev
+- **Description:** Integrate SWR for dashboard data fetching
+- **Acceptance Criteria:**
+  - [ ] Fetch `/api/admin/analytics/dashboard` on component mount
+  - [ ] Pass JWT token in Authorization header
+  - [ ] Revalidate on window focus
+  - [ ] Handle loading state (show skeletons)
+  - [ ] Handle error state (show error message + retry button)
+  - [ ] Cache with 5-minute TTL (SWR config)
+  - [ ] Manual refresh button to force refetch (mutate)
+  - [ ] Update date range → refetch with new query params
+- **Dependencies:** FE-33, BE-27
+- **Files:** `apps/frontend/pages/admin/dashboard.tsx`
+
+#### FE-40: Add date range picker component (Optional)
+- **ID:** FE-40
+- **Estimate:** 1 day (8h)
+- **Assignee:** Frontend Dev
+- **Description:** Create advanced date range picker with presets
+- **Acceptance Criteria:**
+  - [ ] Dropdown with presets: Last 7 days, Last 30 days, This Month, Last Month
+  - [ ] Custom date range with calendar picker (react-datepicker or native input)
+  - [ ] Update URL query params on selection (shareable links)
+  - [ ] Display selected range in header
+  - [ ] Apply button to trigger refetch
+  - [ ] Responsive design
+- **Dependencies:** FE-33, FE-39
+- **Files:** `apps/frontend/components/DateRangePicker.tsx`, `apps/frontend/pages/admin/dashboard.tsx`
+- **Priority:** Low (nice-to-have)
+
+#### FE-41: Create /admin/analytics navigation (Optional)
+- **ID:** FE-41
+- **Estimate:** 0.5 day (4h)
+- **Assignee:** Frontend Dev
+- **Description:** Add analytics submenu to admin navigation
+- **Acceptance Criteria:**
+  - [ ] Update admin layout/navigation component
+  - [ ] Add "Analytics" menu item with submenu
+  - [ ] Submenu items: Dashboard, Revenue, Inventory
+  - [ ] Highlight active page
+  - [ ] Placeholder pages for Revenue/Inventory (future sprint)
+- **Dependencies:** FE-33
+- **Files:** `apps/frontend/components/Layout.tsx` or admin nav component
+- **Priority:** Low
+
+#### FE-42: Add responsive design for mobile/tablet
+- **ID:** FE-42
+- **Estimate:** 1 day (8h)
+- **Assignee:** Frontend Dev
+- **Description:** Optimize dashboard for mobile and tablet screens
+- **Acceptance Criteria:**
+  - [ ] Stats cards: 1 column on mobile, 2 on tablet, 4 on desktop
+  - [ ] Tables: horizontal scroll on mobile with sticky first column
+  - [ ] Collapsible sections on mobile (accordion style)
+  - [ ] Touch-friendly buttons (min 44px touch target)
+  - [ ] Test on real devices or browser dev tools
+  - [ ] No horizontal scroll on viewport (overflow handled properly)
+- **Dependencies:** FE-34 to FE-38
+- **Files:** `apps/frontend/pages/admin/dashboard.tsx`
+
+#### FE-43: Add loading skeletons
+- **ID:** FE-43
+- **Estimate:** 0.5 day (4h)
+- **Assignee:** Frontend Dev
+- **Description:** Create loading skeleton components for better UX
+- **Acceptance Criteria:**
+  - [ ] Skeleton for stat cards (shimmer effect with Tailwind)
+  - [ ] Skeleton for table rows (5-10 placeholder rows)
+  - [ ] Smooth transition from skeleton to actual content
+  - [ ] Match skeleton shape to real content
+  - [ ] Use `animate-pulse` for shimmer
+- **Dependencies:** FE-34 to FE-38
+- **Files:** `apps/frontend/components/Skeleton.tsx`, `apps/frontend/pages/admin/dashboard.tsx`
+
+#### FE-44: Implement error states with retry
+- **ID:** FE-44
+- **Estimate:** 0.5 day (4h)
+- **Assignee:** Frontend Dev
+- **Description:** Add comprehensive error handling UI
+- **Acceptance Criteria:**
+  - [ ] Network error → Show "Failed to load dashboard. [Retry]" button
+  - [ ] Empty state → "No data available for selected date range"
+  - [ ] 401 error → Redirect to login page
+  - [ ] Retry button triggers SWR mutate() to refetch
+  - [ ] Error message styling (red border, icon)
+  - [ ] Accessible error messages (aria-live="polite")
+- **Dependencies:** FE-39
+- **Files:** `apps/frontend/pages/admin/dashboard.tsx`
+
+---
+
+### Frontend Testing (TEST)
+
+#### TEST-17: Component tests for dashboard sections
+- **ID:** TEST-17
+- **Estimate:** 1.5 days (12h)
+- **Assignee:** Frontend Dev
+- **Description:** Write component tests for dashboard with React Testing Library
+- **Acceptance Criteria:**
+  - [ ] File `apps/frontend/tests/components/Dashboard.test.tsx`
+  - [ ] Test stats cards render with correct data
+  - [ ] Test tables render and sort correctly
+  - [ ] Test date range selector updates API calls
+  - [ ] Test loading states display skeletons
+  - [ ] Test error states show error message + retry
+  - [ ] Mock API responses with MSW (Mock Service Worker) or similar
+  - [ ] All tests pass with `yarn test`
+- **Dependencies:** FE-34 to FE-44
+- **Files:** `apps/frontend/tests/components/Dashboard.test.tsx`
+
+#### TEST-18: E2E tests for analytics dashboard
+- **ID:** TEST-18
+- **Estimate:** 1 day (8h)
+- **Assignee:** Frontend Dev or QA
+- **Description:** Write E2E tests with Playwright for analytics dashboard
+- **Acceptance Criteria:**
+  - [ ] File `e2e/admin-analytics.spec.ts`
+  - [ ] Test: Admin logs in → dashboard loads with data
+  - [ ] Test: Click date range selector → data updates
+  - [ ] Test: Click category row → navigates to products page
+  - [ ] Test: Low stock alert displays when threshold met
+  - [ ] Test: All tables render correctly
+  - [ ] Test: Refresh button refetches data
+  - [ ] Run with `yarn test:e2e`
+- **Dependencies:** FE-39, BE-27
+- **Files:** `e2e/admin-analytics.spec.ts`
+
+#### TEST-19: Visual regression tests (Optional)
+- **ID:** TEST-19
+- **Estimate:** 0.5 day (4h)
+- **Assignee:** Frontend Dev
+- **Description:** Add screenshot comparison for dashboard layout
+- **Acceptance Criteria:**
+  - [ ] Use Playwright screenshot comparison
+  - [ ] Capture dashboard in desktop, tablet, mobile viewports
+  - [ ] Ensure charts/tables render consistently
+  - [ ] Update snapshots when layout changes intentionally
+- **Dependencies:** TEST-18
+- **Files:** `e2e/admin-analytics.spec.ts`
+- **Priority:** Low
+
+---
+
+### Documentation (DOC)
+
+#### DOC-07: Update API_TESTING.md with analytics endpoints
+- **ID:** DOC-07
+- **Estimate:** 0.5 day (4h)
+- **Assignee:** Backend Dev
+- **Description:** Document new analytics API endpoints for testing
+- **Acceptance Criteria:**
+  - [ ] Add curl examples for `/api/admin/analytics/dashboard`
+  - [ ] Add curl examples for `/api/admin/analytics/revenue` (all groupBy modes)
+  - [ ] Add curl examples for `/api/admin/analytics/inventory` (all groupBy modes)
+  - [ ] Document query parameters and response formats
+  - [ ] Add example responses with sample data
+  - [ ] Include authentication header examples
+- **Dependencies:** BE-27, BE-28, BE-29
+- **Files:** `API_TESTING.md`
+
+#### DOC-08: Update README.md with analytics feature
+- **ID:** DOC-08
+- **Estimate:** 0.25 day (2h)
+- **Assignee:** Tech Lead or Backend Dev
+- **Description:** Add analytics feature description to README
+- **Acceptance Criteria:**
+  - [ ] Add "Analytics Dashboard" section
+  - [ ] Mention key metrics available to admin
+  - [ ] Add screenshot of dashboard (optional)
+  - [ ] Update features list
+- **Dependencies:** FE-39 (dashboard implemented)
+- **Files:** `README.md`
+
+#### DOC-09: Add inline code comments for complex aggregations
+- **ID:** DOC-09
+- **Estimate:** 0.5 day (4h)
+- **Assignee:** Backend Dev
+- **Description:** Document complex PostgreSQL queries and business logic
+- **Acceptance Criteria:**
+  - [ ] Add JSDoc comments for all analytics functions
+  - [ ] Document PostgreSQL `$queryRaw` usage and why (performance)
+  - [ ] Explain revenue calculation business logic (which statuses count)
+  - [ ] Comment inventory aggregation queries
+  - [ ] Add examples of expected input/output
+- **Dependencies:** BE-27, BE-28, BE-29
+- **Files:** All 3 analytics endpoint files
+
+---
+
 ## Task Summary
 
-**Total tasks:** ~80 tasks
+**Total tasks:** ~105 tasks (including Sprint 7: 25 new tasks)
 
-**Estimated total:** ~250-300 hours
+**Estimated total:** ~450-500 hours
 
 **Sprint breakdown:**
 - Sprint 1: ~50h (Foundation)
@@ -1829,12 +2285,25 @@ Goal: Implement comprehensive order status management for admins with audit logg
 - Sprint 3: ~35h (Checkout)
 - Sprint 4: ~70h (Admin Panel)
 - Sprint 5: ~60h (Testing, Polish, Deploy)
+- **Sprint 7: ~180h (Analytics & Inventory Management)** — NEW
+  - Backend API: ~72h (9 days)
+  - Frontend Dashboard: ~88h (11 days)
+  - Documentation: ~6h (0.75 day)
+  - Testing: ~20h (included in backend/frontend)
+
+**Sprint 7 Task Breakdown:**
+- Database: 1 task (✅ completed)
+- Backend API: 4 tasks (BE-27 to BE-30)
+- Backend Testing: 3 tasks (TEST-14 to TEST-16)
+- Frontend Dashboard: 12 tasks (FE-33 to FE-44)
+- Frontend Testing: 3 tasks (TEST-17 to TEST-19)
+- Documentation: 3 tasks (DOC-07 to DOC-09)
 
 **Priority labels:**
-- 🔴 Critical: DB schema, checkout transaction, auth
-- 🟡 High: Core features (product listing, cart, admin CRUD)
-- 🟢 Medium: Polish, optional features
-- ⚪ Low: Nice-to-have
+- 🔴 Critical: DB schema, checkout transaction, auth, analytics indexes
+- 🟡 High: Core features (product listing, cart, admin CRUD, analytics dashboard)
+- 🟢 Medium: Polish, optional features, advanced analytics
+- ⚪ Low: Nice-to-have (charts, CSV export, visual regression tests)
 
 **Dependencies map:** See each task's "Dependencies" field
 
@@ -1849,3 +2318,11 @@ Goal: Implement comprehensive order status management for admins with audit logg
 5. **Link to PRs:** Thêm PR link vào task khi implement
 
 **Export to project management tool:** Copy tasks to Jira/Linear/GitHub Projects với task ID, estimates, dependencies.
+
+**Sprint 7 Quick Start:**
+1. ✅ DB-04: Indexes added (completed)
+2. Start with BE-27 (dashboard endpoint) - foundational API
+3. Parallel: FE-33 (page structure) can start immediately
+4. Backend devs: BE-27 → BE-28 → BE-29 → BE-30 → Tests
+5. Frontend devs: FE-33 → FE-34 to FE-38 → FE-39 (SWR) → Polish (FE-42 to FE-44)
+6. Final: Integration testing (TEST-17, TEST-18) + Documentation (DOC-07 to DOC-09)
