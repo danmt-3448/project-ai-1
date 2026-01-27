@@ -16,6 +16,12 @@ A minimal online store built with Next.js, TypeScript, and PostgreSQL.
   - Shipping tracking (carrier, tracking number, dates)
   - Optimistic concurrency control to prevent conflicts
   - Idempotency support for safe retries
+- 📊 **Analytics Dashboard** (Sprint 7):
+  - Comprehensive metrics for products, inventory, revenue, and orders
+  - Revenue analytics with 4 groupBy modes: order, product, month, category
+  - Inventory insights: low stock alerts, category breakdown, stock status
+  - Date range filtering for revenue analysis
+  - Real-time dashboard with optimized PostgreSQL queries
 
 ## Tech Stack
 
@@ -27,7 +33,118 @@ A minimal online store built with Next.js, TypeScript, and PostgreSQL.
 
 ---
 
-## 🚀 Local Development
+## ⚡ Quick Start Guide (New Developers)
+
+Follow these steps to get the project running on your machine:
+
+### Step 1: Prerequisites
+```bash
+# Check Node.js version (need 20+)
+node --version
+
+# Check Yarn installation
+yarn --version
+
+# Check Docker installation (for PostgreSQL)
+docker --version
+```
+
+### Step 2: Clone and Install Dependencies
+```bash
+# Clone repository
+git clone <repo-url>
+cd mini-storefront
+
+# Switch to Node 20 (if using nvm)
+nvm use
+
+# Install all dependencies
+yarn install
+```
+
+### Step 3: Start PostgreSQL Database
+```bash
+# Start Docker PostgreSQL container
+docker-compose up -d
+
+# Verify database is running
+docker ps | grep postgres
+```
+
+### Step 4: Setup Database Schema & Data
+```bash
+# Generate Prisma Client
+cd apps/backend
+yarn prisma generate --schema=prisma/schema.postgres.prisma
+
+# Run migrations to create tables
+yarn prisma migrate deploy --schema=prisma/schema.postgres.prisma
+
+# Go back to root and seed database
+cd ../..
+yarn seed
+```
+
+### Step 5: Configure Environment Variables
+Create `.env` files if not exists:
+
+**`apps/backend/.env`:**
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/storefront_dev?schema=public"
+JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
+FRONTEND_URL="http://localhost:3000"
+```
+
+**`apps/frontend/.env.local`:**
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001
+```
+
+### Step 6: Start Development Servers
+```bash
+# Start both frontend and backend
+yarn dev
+```
+
+### Step 7: Access Application
+- **Frontend Store:** http://localhost:3000
+- **Admin Dashboard:** http://localhost:3000/admin
+- **Backend API:** http://localhost:3001/api
+
+**Default Admin Login:**
+- Username: `admin`
+- Password: `admin123`
+
+### Troubleshooting
+
+**Can't login to admin?**
+```bash
+# Verify admin user exists
+docker exec -it project-ai-1-db-1 psql -U postgres -d storefront_dev -c "SELECT username FROM admin_users;"
+
+# If empty, seed again
+yarn seed
+```
+
+**Database connection error?**
+```bash
+# Check if PostgreSQL is running
+docker ps
+
+# Restart PostgreSQL
+docker-compose restart
+```
+
+**Port already in use?**
+```bash
+# Kill processes on ports 3000 and 3001
+lsof -ti:3000 | xargs kill -9
+lsof -ti:3001 | xargs kill -9
+```
+
+---
+
+## 🚀 Local Development (Detailed)
 
 ### Prerequisites
 

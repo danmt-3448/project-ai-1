@@ -1,7 +1,8 @@
 import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
-import { api, Category } from '@/lib/api';
+import { api } from '@/lib/api';
+import type { Category } from '@/types';
 
 export default function Categories() {
   const { data: categories, error } = useSWR<Category[]>(

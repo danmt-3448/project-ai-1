@@ -18,13 +18,16 @@ async function handler(req: AuthRequest, res: NextApiResponse) {
   const { id } = req.query;
 
   if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'Invalid product ID' });
+    return res.status(400).json({ error: 'Invalid product ID or slug' });
   }
 
   if (req.method === 'GET') {
     try {
+      // Check if id is a slug (contains hyphens) or a CUID/UUID (typically no hyphens or standard UUID format)
+      const isSlug = id.includes('-') && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      
       const product = await prisma.product.findUnique({
-        where: { id },
+        where: isSlug ? { slug: id } : { id },
         include: {
           category: {
             select: {
@@ -63,9 +66,12 @@ async function handler(req: AuthRequest, res: NextApiResponse) {
 
       const data = validationResult.data;
 
+      // Check if id is a slug (contains hyphens) or a CUID/UUID
+      const isSlug = id.includes('-') && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
       // Check if product exists
       const existingProduct = await prisma.product.findUnique({
-        where: { id },
+        where: isSlug ? { slug: id } : { id },
       });
 
       if (!existingProduct) {
@@ -105,7 +111,7 @@ async function handler(req: AuthRequest, res: NextApiResponse) {
       if (data.images !== undefined) updateData.images = JSON.stringify(data.images);
 
       const product = await prisma.product.update({
-        where: { id },
+        where: { id: existingProduct.id },
         data: updateData,
         include: {
           category: {
@@ -130,8 +136,11 @@ async function handler(req: AuthRequest, res: NextApiResponse) {
 
   if (req.method === 'DELETE') {
     try {
+      // Check if id is a slug (contains hyphens) or a CUID/UUID
+      const isSlug = id.includes('-') && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      
       const product = await prisma.product.findUnique({
-        where: { id },
+        where: isSlug ? { slug: id } : { id },
       });
 
       if (!product) {
@@ -139,7 +148,7 @@ async function handler(req: AuthRequest, res: NextApiResponse) {
       }
 
       await prisma.product.delete({
-        where: { id },
+        where: { id: product.id },
       });
 
       return res.status(200).json({ message: 'Product deleted successfully' });

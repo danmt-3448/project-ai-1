@@ -920,4 +920,307 @@ curl http://localhost:3001/api/admin/orders/{ORDER_ID}/activities \
 
 ---
 
+## 📊 Analytics Endpoints
+
+### 11. GET /api/admin/analytics/dashboard
+
+Get comprehensive dashboard analytics including products, inventory, revenue, and orders statistics.
+
+**Required**: Admin JWT token
+
+```bash
+curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  http://localhost:3001/api/admin/analytics/dashboard
+```
+
+**With date range**:
+```bash
+curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  "http://localhost:3001/api/admin/analytics/dashboard?startDate=2026-01-01T00:00:00Z&endDate=2026-01-31T23:59:59Z"
+```
+
+**Expected Response**:
+```json
+{
+  "products": {
+    "total": 10,
+    "published": 8,
+    "unpublished": 2
+  },
+  "inventory": {
+    "totalUnits": 250,
+    "byCategory": [
+      {
+        "categoryId": "cat-1",
+        "categoryName": "Áo",
+        "categorySlug": "ao",
+        "totalUnits": 150,
+        "productCount": 5
+      }
+    ],
+    "lowStock": [
+      {
+        "productId": "prod-1",
+        "name": "Áo Thun",
+        "slug": "ao-thun",
+        "inventory": 3,
+        "categoryName": "Áo"
+      }
+    ]
+  },
+  "revenue": {
+    "totalRevenue": 5000000,
+    "totalOrders": 25,
+    "averageOrderValue": 200000,
+    "byMonth": [
+      {
+        "month": 1,
+        "year": 2026,
+        "revenue": 2000000,
+        "orderCount": 10
+      }
+    ],
+    "topProducts": [
+      {
+        "productId": "prod-1",
+        "name": "Áo Thun",
+        "revenue": 1500000,
+        "unitsSold": 10
+      }
+    ]
+  },
+  "orders": {
+    "total": 30,
+    "confirmed": 20,
+    "processing": 3,
+    "shipped": 2,
+    "delivered": 15,
+    "cancelled": 5,
+    "failed": 0
+  }
+}
+```
+
+---
+
+### 12. GET /api/admin/analytics/revenue
+
+Get revenue analytics with 4 groupBy modes: order, product, month, category.
+
+**Required**: Admin JWT token, `groupBy` parameter
+
+**groupBy=order** (Individual orders with pagination):
+```bash
+curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  "http://localhost:3001/api/admin/analytics/revenue?groupBy=order&limit=10&offset=0"
+```
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "id": "order-123",
+      "buyerName": "Nguyen Van A",
+      "revenue": 300000,
+      "itemCount": 2,
+      "status": "DELIVERED",
+      "createdAt": "2026-01-15T10:30:00.000Z"
+    }
+  ],
+  "total": 25,
+  "page": 1,
+  "limit": 10,
+  "summary": {
+    "totalRevenue": 5000000,
+    "totalOrders": 25
+  }
+}
+```
+
+**groupBy=product** (Revenue per product):
+```bash
+curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  "http://localhost:3001/api/admin/analytics/revenue?groupBy=product&sortBy=revenue&sortOrder=desc"
+```
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "productId": "prod-1",
+      "name": "Áo Thun Cơ Bản",
+      "slug": "ao-thun-co-ban",
+      "categoryName": "Áo",
+      "revenue": 1500000,
+      "unitsSold": 10,
+      "orderCount": 8
+    }
+  ],
+  "summary": {
+    "totalRevenue": 5000000,
+    "totalOrders": 25
+  }
+}
+```
+
+**groupBy=month** (Monthly aggregation):
+```bash
+curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  "http://localhost:3001/api/admin/analytics/revenue?groupBy=month"
+```
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "month": 1,
+      "year": 2026,
+      "revenue": 2000000,
+      "orderCount": 10,
+      "averageOrderValue": 200000
+    }
+  ],
+  "summary": {
+    "totalRevenue": 5000000,
+    "totalOrders": 25
+  }
+}
+```
+
+**groupBy=category** (Revenue per category):
+```bash
+curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  "http://localhost:3001/api/admin/analytics/revenue?groupBy=category"
+```
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "categoryId": "cat-1",
+      "name": "Áo",
+      "slug": "ao",
+      "revenue": 3000000,
+      "unitsSold": 20,
+      "orderCount": 15,
+      "productCount": 5
+    }
+  ],
+  "summary": {
+    "totalRevenue": 5000000,
+    "totalOrders": 25
+  }
+}
+```
+
+**With date range**:
+```bash
+curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  "http://localhost:3001/api/admin/analytics/revenue?groupBy=product&startDate=2026-01-01T00:00:00Z&endDate=2026-01-31T23:59:59Z"
+```
+
+---
+
+### 13. GET /api/admin/analytics/inventory
+
+Get inventory analytics with 3 groupBy modes: category, product, status.
+
+**Required**: Admin JWT token
+
+**groupBy=category (default)** (Total units per category):
+```bash
+curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  "http://localhost:3001/api/admin/analytics/inventory?groupBy=category"
+```
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "categoryId": "cat-1",
+      "name": "Áo",
+      "slug": "ao",
+      "totalUnits": 150,
+      "productCount": 5,
+      "publishedProducts": 5,
+      "unpublishedProducts": 0,
+      "averageInventory": 30,
+      "lowStockProducts": 1
+    }
+  ],
+  "summary": {
+    "totalUnits": 250,
+    "totalProducts": 10
+  }
+}
+```
+
+**groupBy=product** (Product-level inventory):
+```bash
+curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  "http://localhost:3001/api/admin/analytics/inventory?groupBy=product&lowStockThreshold=5"
+```
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "productId": "prod-1",
+      "name": "Áo Thun Cơ Bản",
+      "slug": "ao-thun-co-ban",
+      "categoryName": "Áo",
+      "inventory": 3,
+      "published": true,
+      "isLowStock": true,
+      "price": 150000
+    }
+  ],
+  "summary": {
+    "totalUnits": 250,
+    "totalProducts": 10
+  }
+}
+```
+
+**groupBy=status** (Aggregate by published status):
+```bash
+curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  "http://localhost:3001/api/admin/analytics/inventory?groupBy=status"
+```
+
+**Response**:
+```json
+{
+  "data": {
+    "published": {
+      "totalUnits": 230,
+      "productCount": 8
+    },
+    "unpublished": {
+      "totalUnits": 20,
+      "productCount": 2
+    }
+  },
+  "summary": {
+    "totalUnits": 250,
+    "totalProducts": 10
+  }
+}
+```
+
+**With includeUnpublished flag**:
+```bash
+curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  "http://localhost:3001/api/admin/analytics/inventory?groupBy=category&includeUnpublished=true"
+```
+
+---
+
 **All API endpoints tested and working! ✅**
+

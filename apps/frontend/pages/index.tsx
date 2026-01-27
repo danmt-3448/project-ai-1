@@ -2,7 +2,8 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
-import { api, Category, Product } from '@/lib/api';
+import { api } from '@/lib/api';
+import type { Category, Product } from '@/types';
 import ProductCard from '@/components/ProductCard';
 
 
