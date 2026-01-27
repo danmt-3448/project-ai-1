@@ -1,13 +1,11 @@
-import { useState } from 'react';
-import { useRouter } from 'next/router';
-import useSWR from 'swr';
+import { withAdminAuth } from '@/lib/withAdminAuth';
+import { api } from '@/lib/api';
 import Head from 'next/head';
 import Link from 'next/link';
-import { api } from '@/lib/api';
-import type { Order } from '@/types';
+import { useState } from 'react';
+import useSWR from 'swr';
 
-export default function AdminOrders() {
-  const router = useRouter();
+function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [page, setPage] = useState(1);
 
@@ -16,10 +14,7 @@ export default function AdminOrders() {
     return await api.adminGetOrders({ page, limit: 20, status: statusFilter || undefined });
   };
 
-  const { data, error } = useSWR(
-    ['/admin/orders', page, statusFilter],
-    fetcher
-  );
+  const { data, error } = useSWR(['/admin/orders', page, statusFilter], fetcher);
 
   const statusColors: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800',
@@ -208,3 +203,5 @@ export default function AdminOrders() {
     </>
   );
 }
+
+export default withAdminAuth(AdminOrders);

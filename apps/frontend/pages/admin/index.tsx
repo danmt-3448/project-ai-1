@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { withAdminAuth } from '@/lib/withAdminAuth';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { api } from '@/lib/api';
 
-export default function AdminLogin() {
+function AdminLogin() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     username: '',
@@ -11,14 +12,6 @@ export default function AdminLogin() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Check if already logged in
-  useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (token) {
-      router.push('/admin/dashboard');
-    }
-  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,3 +102,5 @@ export default function AdminLogin() {
     </>
   );
 }
+
+export default withAdminAuth(AdminLogin);

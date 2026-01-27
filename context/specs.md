@@ -15,7 +15,7 @@ This specification covers both Frontend (Next.js + TypeScript) and Backend (Next
 - Persistence: relational DB recommended (Postgres). Use lightweight ORM (Prisma) or plain SQL.
 
 **Tech Stack (Implemented)**
-- **Frontend**: Next.js 14.0.4 (Pages Router), React 18.2.0, TypeScript 5.3.3, Tailwind CSS 3.3.6, SWR 2.2.4 (data fetching), Zustand 4.4.7 (state management with persist middleware), Axios 1.6.2 (API client)
+- **Frontend**: Next.js 14.0.4 (Pages Router), React 18.2.0, TypeScript 5.3.3, Tailwind CSS 3.3.6, SWR 2.2.4 (data fetching), Zustand 4.4.7 (state management with persist middleware), Axios 1.6.2 (API client), React-Toastify 11.0.5 (notifications)
 - **Backend**: Next.js 14.0.4 (API Routes), TypeScript 5.3.3, Prisma ORM 5.7.0, Zod 3.22.4 (validation), jsonwebtoken 9.0.2 (JWT auth), bcryptjs 2.4.3 (password hashing)
 - **Database**:  PostgreSQL
 - **Package Manager**: Yarn 1.22.19 (enforced via packageManager field), workspace support enabled
@@ -43,9 +43,9 @@ This specification covers both Frontend (Next.js + TypeScript) and Backend (Next
 - `/checkout` — Checkout form ([checkout.tsx](apps/frontend/pages/checkout.tsx)): Collects buyer name (required, min 1 char), email (email validation), shipping address (required, min 10 chars); displays order summary from cart; POST to `/api/checkout` on submit; redirects to order confirmation on success.
 - `/order/[id]` — Order confirmation ([order/[id].tsx](apps/frontend/pages/order/[id].tsx)): Displays order details fetched from `/api/orders/:id` including buyer info, items, total, status.
 
-**Admin Routes** (JWT authentication required, client-side token validation):
-- `/admin` — Admin login redirect ([admin/index.tsx](apps/frontend/pages/admin/index.tsx)): Redirects to `/admin/dashboard` if authenticated, otherwise redirects to login.
-- `/admin/dashboard` — Admin overview ([admin/dashboard.tsx](apps/frontend/pages/admin/dashboard.tsx)): Summary metrics (total products, inventory warnings), quick links to management pages.
+**Admin Routes** (JWT authentication required via withAdminAuth HOC):
+- `/admin` — Admin login ([admin/index.tsx](apps/frontend/pages/admin/index.tsx)): Login form with username/password validation. Redirects to `/admin/dashboard` if already authenticated via withAdminAuth HOC.
+- `/admin/dashboard` — Admin overview ([admin/dashboard.tsx](apps/frontend/pages/admin/dashboard.tsx)): Summary metrics (total products, inventory warnings), quick links to management pages. Protected by withAdminAuth HOC.
 - `/admin/products` — Products list ([admin/products/index.tsx](apps/frontend/pages/admin/products/index.tsx)): Table of all products (including unpublished), quick actions (edit, delete), filters by published status.
 - `/admin/products/create` — Create product ([admin/products/create.tsx](apps/frontend/pages/admin/products/create.tsx)): Form with fields: name, slug (auto-generated option), description (textarea), category (dropdown from `/api/categories`), price (number, min 0), inventory (integer, min 0), published (checkbox), images (text input for JSON array or file upload future). POST to `/api/admin/products` with JWT token in Authorization header.
 - `/admin/products/[id]/edit` — Edit product ([admin/products/[id]/edit.tsx](apps/frontend/pages/admin/products/[id]/edit.tsx)): Pre-filled form with product data from `GET /api/admin/products/:id`, same fields as create. PUT to `/api/admin/products/:id`.
@@ -62,19 +62,28 @@ This specification covers both Frontend (Next.js + TypeScript) and Backend (Next
   - Prevents deletion if category has associated products
 
 **Reusable Components**:
-- `Layout.tsx` — Main layout wrapper with navigation, handles admin auth state
+- `Layout.tsx` — Main layout wrapper with navigation, handles admin auth state. Includes global ToastContainer for notifications.
 - `ProductCard.tsx` — Displays product thumbnail, name, price, quick add-to-cart. Tested in `tests/components/ProductCard.test.tsx`.
+- `OrderStatusBadge.tsx` — Displays order status with color-coded badges (PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED).
+- `OrderActivityTimeline.tsx` — Displays order status change history with timestamps and admin attribution.
+
+**Higher-Order Components**:
+- `withAdminAuth` ([lib/withAdminAuth.tsx](apps/frontend/lib/withAdminAuth.tsx)) — HOC that wraps admin pages to enforce authentication. Redirects to `/admin` if no token found, redirects to `/admin/dashboard` if token exists and user is on login page. Prevents redirect loops by checking current pathname.
 
 **State Management**:
 - **Cart State**: Zustand store ([store/cartStore.ts](apps/frontend/store/cartStore.ts)) with persist middleware. Operations: `addItem` (respects inventory max), `removeItem`, `updateQuantity` (auto-removes if quantity <= 0), `clearCart`, `getTotalItems`, `getSubtotal`. Syncs to localStorage key `cart-storage`. Cart items include productId, name, slug, price, quantity, image, inventory. Fully tested in `tests/cart.test.ts`.
-- **Data Fetching**: SWR with default revalidation on focus, custom `api.ts` client using Axios. Base URL from `NEXT_PUBLIC_API_URL` env var. No caching for admin mutations (revalidate after create/update/delete).
+- **Data Fetching**: SWR with default revalidation on focus, centralized API client ([lib/api.ts](apps/frontend/lib/api.ts)) using Axios. Base URL from `NEXT_PUBLIC_API_URL` env var. Axios instance configured with Authorization header interceptor for admin endpoints. All admin API calls use shared client methods (e.g., `api.adminGetProducts`, `api.adminCreateProduct`). No caching for admin mutations (revalidate after create/update/delete).
+- **Authentication**: Admin token stored in localStorage (key: `adminToken`). Token automatically attached to all admin API requests via Axios interceptor. withAdminAuth HOC checks token presence and redirects accordingly.
+- **Notifications**: React-toastify 11.0.5 configured globally in `_app.tsx` with ToastContainer. Toast notifications replace native alert() calls throughout admin panel for better UX (success/error/info toasts with auto-close).
 
 **Client-Side Behavior**:
-- **Optimistic Updates**: Cart operations update Zustand state immediately, no backend sync (cart is client-only).
+- **Optimistic Updates**: Cart operations update Zustand state immediately, no backend sync (cart is client-only). Admin operations use SWR's `mutate()` for optimistic UI updates.
 - **Inventory Awareness**: Cart enforces `Math.min(requestedQuantity, product.inventory)` on add/update operations.
 - **Form Validation**: Zod schemas on backend, basic HTML5 validation on frontend forms.
-- **Loading States**: SWR provides `isLoading` and `error` states for all data fetching.
-- **Error Handling**: API errors displayed via alert/toast (basic implementation), more robust UI needed.
+- **Loading States**: SWR provides `isLoading` and `error` states for all data fetching. Button disabled states during async operations.
+- **Error Handling**: API errors displayed via react-toastify toast notifications (implemented in admin panel). Success messages also shown as toasts. Public store still uses basic error displays.
+- **Authentication Flow**: withAdminAuth HOC automatically redirects unauthenticated users to `/admin` login page. Login page redirects to `/admin/dashboard` if already authenticated. Prevents redirect loops by checking current pathname before redirecting.
+- **API Client**: Centralized Axios instance with base URL configuration and Authorization header interceptor. All admin endpoints use typed API client methods from `lib/api.ts`.
 
 **Accessibility**:
 - Semantic HTML used throughout (nav, main, article, button, form elements)
@@ -151,6 +160,17 @@ This specification covers both Frontend (Next.js + TypeScript) and Backend (Next
   - **Response 200**: `Order` with items relation `{ id, buyerName, buyerEmail, address, total, status, createdAt, items: [{ id, productId, name, price, quantity }] }`
   - **Errors**: 404 (order not found), 500
   - **Implementation**: No authentication required (public confirmation link), includes OrderItem relation
+
+- `GET /api/admin/orders/:id` ([admin/orders/[id]/index.ts](apps/backend/pages/api/admin/orders/[id]/index.ts))
+  - **Auth**: Bearer token required via `requireAdmin` middleware
+  - **Response 200**: `Order` with enhanced items including product details: `{ id, buyerName, buyerEmail, address, total, status, createdAt, items: [{ id, productId, name, price, quantity, product: { id, slug, images: string[] } }] }`
+  - **Errors**: 400 (invalid order id), 401 (unauthorized), 404 (order not found), 500
+  - **Implementation**: 
+    - Fetches order with items relation
+    - Separately fetches product details for each order item using productId
+    - Parses images field from JSON string to array for each product
+    - Returns order with enriched items containing product info (slug, images array)
+    - Handles deleted products gracefully (product field may be null if product deleted after order)
 
 **Admin Endpoints** (JWT required via `requireAdmin` middleware, CORS applied):
 
@@ -777,7 +797,15 @@ model Order {
 - **JWT Secret**: Defaults to `'your-secret-key-change-in-production'` if `JWT_SECRET` env var not set (INSECURE)
 - **Token Expiration**: Not implemented - tokens are infinite lifetime (suitable for MVP admin panel)
 - **Rate Limiting**: Not implemented
-- **Image Parsing**: All product responses parse `images` field from JSON string to array before returning
+- **Image Parsing**: All product responses parse `images` field from JSON string to array before returning. Admin order detail endpoint also parses product images when enriching order items with product data.
+
+**API Client Architecture** ([apps/frontend/lib/api.ts](apps/frontend/lib/api.ts)):
+- Centralized Axios instance with base URL from `NEXT_PUBLIC_API_URL`
+- Axios request interceptor automatically adds `Authorization: Bearer <token>` header for admin endpoints if token exists in localStorage
+- Typed API methods for all endpoints (public and admin)
+- Public methods: `getCategories()`, `getProducts()`, `getProductBySlug()`, `checkout()`
+- Admin methods: `adminLogin()`, `adminGetProducts()`, `adminCreateProduct()`, `adminUpdateProduct()`, `adminDeleteProduct()`, `adminGetCategories()`, `adminCreateCategory()`, `adminUpdateCategory()`, `adminDeleteCategory()`, `adminGetOrders()`, `adminGetOrderById()`, `adminUpdateOrderStatus()`, `adminGetDashboard()`
+- Error handling: Axios errors propagated to caller, handled by toast notifications in UI
 
 Minimal OpenAPI-like schema (example)
 

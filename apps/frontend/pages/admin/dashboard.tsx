@@ -5,6 +5,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { api } from '@/lib/api';
 import type { DashboardResponse } from '@/types';
+import { withAdminAuth } from '@/lib/withAdminAuth';
 
 // Fetcher function for SWR
 const dashboardFetcher = async () => {
@@ -30,7 +31,7 @@ const formatMonth = (monthStr: string) => {
   return `Tháng ${parseInt(month)}/${year}`;
 };
 
-export default function AdminDashboard() {
+function AdminDashboard() {
   const router = useRouter();
   const [adminUser, setAdminUser] = useState<{ username: string } | null>(null);
 
@@ -45,13 +46,7 @@ export default function AdminDashboard() {
   );
 
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
     const user = localStorage.getItem('adminUser');
-
-    if (!token) {
-      router.push('/admin');
-      return;
-    }
 
     if (user) {
       setAdminUser(JSON.parse(user));
@@ -322,9 +317,7 @@ export default function AdminDashboard() {
                   <tbody>
                     {data.revenue.byMonth.slice(0, 6).map((month) => (
                       <tr key={month.month} className="border-b">
-                        <td className="py-3 text-sm">
-                          {formatMonth(month.month)}
-                        </td>
+                        <td className="py-3 text-sm">{formatMonth(month.month)}</td>
                         <td className="py-3 text-right font-semibold text-primary">
                           {formatCurrency(month.revenue)}
                         </td>
@@ -376,3 +369,5 @@ export default function AdminDashboard() {
     </>
   );
 }
+
+export default withAdminAuth(AdminDashboard);

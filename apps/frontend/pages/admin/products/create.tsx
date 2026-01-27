@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { withAdminAuth } from '@/lib/withAdminAuth';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import Head from 'next/head';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import type { Category } from '@/types';
+import { useState } from 'react';
 
-export default function CreateProduct() {
+function CreateProduct() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -266,3 +267,5 @@ export default function CreateProduct() {
     </>
   );
 }
+
+export default withAdminAuth(CreateProduct);

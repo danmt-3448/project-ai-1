@@ -5,8 +5,9 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import type { Product, Category } from '@/types';
+import { withAdminAuth } from '@/lib/withAdminAuth';
 
-export default function EditProduct() {
+ function EditProduct() {
   const router = useRouter();
   const { id } = router.query;
   const [loading, setLoading] = useState(false);
@@ -291,3 +292,5 @@ export default function EditProduct() {
     </>
   );
 }
+
+export default withAdminAuth(EditProduct);
